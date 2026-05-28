@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Andes Capital 360 • Junior Miners</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Supabase Client via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Inter', system_ui, sans-serif; }
+        .font-display { font-family: 'Space Grotesk', 'Inter', sans-serif; font-weight: 600; }
+        .company-row:hover { background-color: #171717; }
+        .risk-low { background-color: #052e16; color: #4ade80; }
+        .risk-medium { background-color: #431407; color: #fb923c; }
+        .risk-high { background-color: #450a0a; color: #f87171; }
+        .dma-above { background-color: #052e16; color: #4ade80; }
+        .dma-below { background-color: #450a0a; color: #f87171; }
+        .type-gold { background-color: #451a03; color: #fbbf24; }
+        .type-silver { background-color: #1e2937; color: #94a3b8; }
+        .type-copper { background-color: #431407; color: #fb923c; }
+        .type-diversified { background-color: #1e3a5f; color: #60a5fa; }
+        .type-critical { background-color: #134e4b; color: #5eead4; }
+        .filter-chip { transition: all 0.1s ease; cursor: pointer; }
+        .filter-chip.active { background-color: #d4af37; color: #111111; font-weight: 600; }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-200">
+    <!-- NAV -->
+    <nav class="border-b border-zinc-800 bg-zinc-950/95 backdrop-blur-lg sticky top-0 z-50">
+        <div class="max-w-screen-2xl mx-auto px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-x-3">
+                <!-- Enhanced Logo -->
+                <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="40" height="40" rx="6" fill="#1e3a5f"/>
+                    <polygon points="0,32 6,18 12,26 18,12 24,24 30,10 36,20 40,28 40,40 0,40" fill="#475569"/>
+                    <polygon points="0,36 5,24 11,30 17,17 23,28 29,15 35,25 40,32 40,40 0,40" fill="#64748b"/>
+                    <polygon points="6,18 9,22 12,18 12,26 9,23 6,26" fill="#f1f5f9"/>
+                    <polygon points="18,12 21,17 24,12 24,24 21,20 18,24" fill="#f1f5f9"/>
+                    <polygon points="30,10 33,15 36,10 36,20" fill="#e0f2fe"/>
+                    <rect x="0" y="33" width="40" height="7" fill="#3f2a1d"/>
+                    <g stroke="#166534" stroke-width="1.3">
+                        <line x1="1" y1="34.5" x2="39" y2="34.5"/>
+                        <line x1="1" y1="36.5" x2="39" y2="36.5"/>
+                        <line x1="1" y1="38.5" x2="39" y2="38.5"/>
+                    </g>
+                    <g stroke="#4ade80" stroke-width="0.7">
+                        <circle cx="5" cy="35" r="1.4"/>
+                        <circle cx="12" cy="37" r="1.4"/>
+                        <circle cx="19" cy="35" r="1.4"/>
+                        <circle cx="26" cy="37" r="1.4"/>
+                        <circle cx="33" cy="35" r="1.4"/>
+                    </g>
+                    <circle cx="6.5" cy="35.2" r="0.7" fill="#f59e0b"/>
+                    <circle cx="20.5" cy="35.2" r="0.7" fill="#f59e0b"/>
+                </svg>
+
+                <div>
+                    <span class="font-display text-3xl font-semibold tracking-tighter">Andes Capital</span>
+                    <span class="font-display text-3xl font-semibold tracking-tighter text-amber-400">360</span>
+                </div>
+                <div class="px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-[10px] font-medium tracking-widest text-amber-400">HIGH RISK, HIGH REWARD</div>
+            </div>
+
+            <div class="flex items-center gap-x-3 text-sm">
+                <button id="refresh-btn" onclick="refreshAllPrices()" class="px-4 py-2 border border-zinc-700 rounded-2xl hover:bg-zinc-900 flex items-center gap-x-2">
+                    <i id="refresh-icon" class="fa-solid fa-sync fa-sm"></i> 
+                    <span id="refresh-btn-text">Refresh Prices</span>
+                </button>
+                
+                <button onclick="exportToExcel()" class="px-4 py-2 border border-zinc-700 rounded-2xl hover:bg-zinc-900">
+                    <i class="fa-solid fa-file-excel"></i> <span>Export Excel</span>
+                </button>
+                <span class="text-[10px] text-amber-400 -ml-2">Premium</span>
+
+                <button onclick="showAddCompanyModal()" class="px-5 py-2 bg-gradient-to-r from-amber-400 to-yellow-500 text-zinc-950 font-semibold rounded-2xl">
+                    <i class="fa-solid fa-plus"></i> <span>Add Company</span>
+                </button>
+                <span class="text-[10px] text-amber-400 -ml-2">Premium</span>
+
+                <button onclick="showWatchlist()" class="px-4 py-2 border border-zinc-700 rounded-2xl hover:bg-zinc-900">
+                    <i class="fa-solid fa-star text-amber-400"></i> <span>Watchlist</span>
+                    <span id="watchlist-count" class="inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold bg-amber-400 text-zinc-950 rounded-full">0</span>
+                </button>
+
+                <button onclick="showSubscribeModal()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-2xl">
+                    <i class="fa-solid fa-credit-card"></i> <span>Subscribe $14.99/mo</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- HERO -->
+    <div class="border-b border-zinc-800 bg-zinc-900/40">
+        <div class="max-w-screen-2xl mx-auto px-6 pt-10 pb-8">
+            <div class="max-w-3xl">
+                <div class="flex items-center gap-x-3 flex-wrap">
+                    <h1 class="text-6xl font-display font-semibold tracking-tighter leading-none">Andes Capital 360's Selection</h1>
+                    
+                    <!-- Cartoon Miner -->
+                    <!-- More realistic 19th century miner illustration -->
+                    <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Body / jacket -->
+                        <rect x="17" y="20" width="14" height="20" rx="2" fill="#3f2a1d"/>
+                        <!-- Head -->
+                        <circle cx="24" cy="16" r="6.5" fill="#d4a373"/>
+                        <!-- Beard / facial hair for historical look -->
+                        <path d="M19 19 Q24 23 29 19" fill="#5c4033"/>
+                        <!-- Eyes -->
+                        <circle cx="21" cy="14.5" r="1" fill="#1f2937"/>
+                        <circle cx="27" cy="14.5" r="1" fill="#1f2937"/>
+                        <!-- Mining hat -->
+                        <rect x="16" y="8" width="16" height="5" rx="1" fill="#1f2937"/>
+                        <rect x="15" y="11" width="18" height="3" fill="#374151"/>
+                        <!-- Lamp on hat -->
+                        <rect x="29" y="10" width="4" height="3" fill="#f59e0b"/>
+                        <!-- Pickaxe -->
+                        <rect x="32" y="14" width="3" height="24" fill="#4b5563"/>
+                        <rect x="28" y="13" width="11" height="3" rx="1" fill="#6b7280"/>
+                        <!-- Hand holding pick -->
+                        <rect x="30" y="23" width="5" height="3" fill="#d4a373"/>
+                        <!-- Legs / pants -->
+                        <rect x="18" y="38" width="5" height="8" fill="#1f2937"/>
+                        <rect x="25" y="38" width="5" height="8" fill="#1f2937"/>
+                        <!-- Boots -->
+                        <rect x="17" y="45" width="7" height="3" fill="#111827"/>
+                        <rect x="24" y="45" width="7" height="3" fill="#111827"/>
+                    </svg>
+                </div>
+
+                <div class="mt-4 max-w-2xl text-xs text-zinc-400 leading-snug">
+                    <strong>Disclaimer:</strong> This selection is for informational and educational purposes only and does not constitute investment advice. Junior mining stocks are highly speculative and volatile. Always do your own due diligence.
+                </div>
+
+                <div class="mt-6 flex gap-x-3">
+                    <button onclick="document.getElementById('universe-section').scrollIntoView({behavior:'smooth'})" class="px-8 h-11 rounded-2xl bg-white text-zinc-950 font-semibold">Browse</button>
+                    <button onclick="showAddCompanyModal()" class="px-6 h-11 rounded-2xl border border-zinc-700 font-medium hover:bg-zinc-900">Add a Company</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- STATS -->
+    <div class="border-b border-zinc-800 bg-zinc-900/60">
+        <div class="max-w-screen-2xl mx-auto px-6 py-5 grid grid-cols-3 gap-px bg-zinc-800 text-sm">
+            <div class="bg-zinc-950 px-5 py-4">
+                <div class="text-xs text-zinc-500">TOTAL TRACKED</div>
+                <div id="stat-total" class="text-3xl font-semibold tabular-nums">100</div>
+            </div>
+            <div class="bg-zinc-950 px-5 py-4">
+                <div class="text-xs text-zinc-500">ABOVE 50-DAY MA</div>
+                <div id="stat-dma" class="text-3xl font-semibold tabular-nums">64<span class="text-xl text-zinc-400">/100</span></div>
+            </div>
+            <div class="bg-zinc-950 px-5 py-4">
+                <div class="text-xs text-zinc-500">MEDIAN RISK</div>
+                <div class="text-3xl font-semibold">High</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FILTERS + TABLE -->
+    <div id="universe-section" class="max-w-screen-2xl mx-auto px-6 pt-8 pb-12">
+        <!-- Filters -->
+        <div class="mb-5 flex flex-wrap gap-2 items-center text-xs">
+            <span class="font-medium text-zinc-500 mr-1">TYPE</span>
+            <div onclick="toggleFilter(this,'type','Gold')" class="filter-chip px-3 py-1 rounded-2xl border border-zinc-700 bg-zinc-900">Gold</div>
+            <div onclick="toggleFilter(this,'type','Silver')" class="filter-chip px-3 py-1 rounded-2xl border border-zinc-700 bg-zinc-900">Silver</div>
+            <div onclick="toggleFilter(this,'type','Copper')" class="filter-chip px-3 py-1 rounded-2xl border border-zinc-700 bg-zinc-900">Copper</div>
+            <div onclick="toggleFilter(this,'type','Critical Minerals')" class="filter-chip px-3 py-1 rounded-2xl border border-zinc-700 bg-zinc-900">Critical Minerals</div>
+            <div onclick="toggleFilter(this,'type','Diversified')" class="filter-chip px-3 py-1 rounded-2xl border border-zinc-700 bg-zinc-900">Diversified</div>
+
+            <div class="w-px h-4 bg-zinc-800 mx-1"></div>
+            <span class="font-medium text-zinc-500 mr-1">CATEGORY</span>
+            <div onclick="toggleFilter(this,'category','Producer')" class="filter-chip px-3 py-1 rounded-2xl border border-zinc-700 bg-zinc-900">Producer</div>
+            <div onclick="toggleFilter(this,'category','Developer')" class="filter-chip px-3 py-1 rounded-2xl border border-zinc-700 bg-zinc-900">Developer</div>
+            <div onclick="toggleFilter(this,'category','Royalty')" class="filter-chip px-3 py-1 rounded-2xl border border-zinc-700 bg-zinc-900">Royalty</div>
+            <div onclick="toggleFilter(this,'category','Explorer')" class="filter-chip px-3 py-1 rounded-2xl border border-zinc-700 bg-zinc-900">Explorer</div>
+
+            <div class="w-px h-4 bg-zinc-800 mx-1"></div>
+            <span class="font-medium text-zinc-500 mr-1">RISK</span>
+            <div onclick="toggleFilter(this,'risk','Low')" class="filter-chip px-3 py-1 rounded-2xl border border-emerald-800 bg-emerald-950 text-emerald-400">Low</div>
+            <div onclick="toggleFilter(this,'risk','Medium')" class="filter-chip px-3 py-1 rounded-2xl border border-orange-800 bg-orange-950 text-orange-400">Medium</div>
+            <div onclick="toggleFilter(this,'risk','High')" class="filter-chip px-3 py-1 rounded-2xl border border-red-800 bg-red-950 text-red-400">High</div>
+        </div>
+
+        <!-- Table -->
+        <div class="bg-zinc-900 border border-zinc-800 rounded-3xl overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm min-w-[1400px]">
+                    <thead>
+                        <tr class="text-xs text-zinc-400 font-semibold border-b border-zinc-700">
+                            <th class="w-8 pl-4"></th>
+                            <th class="text-left py-3 pl-2">COMPANY</th>
+                            <th class="text-left py-3">TICKER</th>
+                            <th class="text-left py-3">TYPE</th>
+                            <th class="text-left py-3">CATEGORY</th>
+                            <th class="text-center py-3">RISK</th>
+                            <th class="text-center py-3">JURISDICTION</th>
+                            <th class="text-center py-3">SCORE</th>
+                            <th class="text-right py-3 pr-3">MKT CAP</th>
+                            <th class="text-right py-3 pr-3">PRICE</th>
+                            <th class="text-center py-3">50-DAY MA</th>
+                            <th class="text-left py-3 pl-2">COMMENT</th>
+                            <th class="w-10"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body" class="divide-y divide-zinc-800"></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="mt-3 text-xs text-zinc-500 px-1">Showing <span id="visible-count">100</span> companies • Not investment advice.</div>
+    </div>
+
+    <!-- Modals -->
+    <!-- Add Company Modal -->
+    <div id="add-modal" onclick="if (event.target.id === 'add-modal') hideAddModal()" class="hidden fixed inset-0 bg-black/80 z-[110] flex items-center justify-center p-4">
+        <div onclick="event.stopImmediatePropagation()" class="modal bg-zinc-900 border border-zinc-700 rounded-3xl w-full max-w-xl">
+            <div class="px-6 py-5 border-b border-zinc-700 flex justify-between items-center">
+                <div class="font-semibold text-xl">Add New Company</div>
+                <button onclick="hideAddModal()"><i class="fa-solid fa-times fa-lg"></i></button>
+            </div>
+            <div class="p-6 grid grid-cols-2 gap-4 text-sm">
+                <div class="col-span-2">
+                    <label class="text-xs text-zinc-400 block mb-1">COMPANY NAME</label>
+                    <input id="add-name" type="text" class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-2.5">
+                </div>
+                <div>
+                    <label class="text-xs text-zinc-400 block mb-1">US TICKER</label>
+                    <input id="add-ticker" type="text" class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-2.5 uppercase">
+                </div>
+                <div>
+                    <label class="text-xs text-zinc-400 block mb-1">JURISDICTION</label>
+                    <input id="add-jurisdiction" type="text" class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-2.5" value="Various">
+                </div>
+                <div>
+                    <label class="text-xs text-zinc-400 block mb-1">TYPE</label>
+                    <select id="add-type" class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-2.5">
+                        <option>Gold</option><option>Silver</option><option>Copper</option><option>Critical Minerals</option><option>Diversified</option><option>Uranium</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs text-zinc-400 block mb-1">CATEGORY</label>
+                    <select id="add-category" class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-2.5">
+                        <option>Producer</option><option>Developer</option><option>Royalty</option><option>Explorer</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs text-zinc-400 block mb-1">RISK</label>
+                    <select id="add-risk" class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-2.5">
+                        <option>Low</option><option>Medium</option><option>High</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs text-zinc-400 block mb-1">OVERALL SCORE (1-100)</label>
+                    <input id="add-score" type="number" value="65" class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-2.5">
+                </div>
+                <div class="col-span-2">
+                    <label class="text-xs text-zinc-400 block mb-1">SHORT COMMENT</label>
+                    <input id="add-comment" type="text" class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-2.5">
+                </div>
+            </div>
+            <div class="px-6 py-5 bg-zinc-950 border-t flex gap-x-3">
+                <button onclick="hideAddModal()" class="flex-1 py-3 rounded-2xl border border-zinc-700">Cancel</button>
+                <button onclick="submitNewCompany()" class="flex-1 py-3 rounded-2xl bg-gradient-to-r from-amber-400 to-yellow-500 text-zinc-950 font-semibold">Add to Universe</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Subscribe Modal -->
+    <div id="subscribe-modal" onclick="if (event.target.id === 'subscribe-modal') hideSubscribeModal()" class="hidden fixed inset-0 bg-black/80 z-[130] flex items-center justify-center p-4">
+        <div onclick="event.stopImmediatePropagation()" class="modal bg-zinc-900 border border-zinc-700 rounded-3xl max-w-md w-full p-8">
+            <div class="font-display text-2xl tracking-tighter font-semibold">Andes Capital 360 Premium</div>
+            <div class="mt-1 text-emerald-400 text-3xl font-semibold">$14.99 <span class="text-base text-zinc-400">/ month</span></div>
+            <div class="mt-4 text-sm text-zinc-300">Unlock full detailed theses, real-time data, Excel exports, and more.</div>
+            <button onclick="alert('Thank you! This would open Stripe checkout in production.'); hideSubscribeModal();" class="mt-6 w-full py-3 rounded-2xl bg-emerald-600 font-semibold">Subscribe Now</button>
+            <button onclick="hideSubscribeModal()" class="mt-3 w-full py-3 rounded-2xl border border-zinc-600 text-sm">Maybe later</button>
+        </div>
+    </div>
+
+    <script>
+        // ==================== SUPABASE CONFIG ====================
+    const SUPABASE_URL = 'https://vlvpksaearjobaqppeiu.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_9hiVf1uRz_CkTEcgVKeLQg_74By8nsH';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // ==================== STATE ====================
+    let companies = [];
+    let watchlist = [];
+
+    // ==================== HELPERS ====================
+    function getUserId() {
+        let id = localStorage.getItem('andes_user_id');
+        if (!id) {
+            id = 'user_' + Date.now() + '_' + Math.random().toString(36).slice(2, 11);
+            localStorage.setItem('andes_user_id', id);
+        }
+        return id;
+    }
+
+    function formatMarketCap(value) {
+        if (!value) return '—';
+        if (value >= 1e9) return '$' + (value / 1e9).toFixed(1) + 'B';
+        return '$' + (value / 1e6).toFixed(0) + 'M';
+    }
+
+    // ==================== DATA LOADING ====================
+    async function loadCompaniesFromSupabase() {
+        try {
+            const { data, error } = await supabase
+                .from('companies')
+                .select('*')
+                .order('name', { ascending: true });
+
+            if (error) throw error;
+            companies = data || [];
+        } catch (err) {
+            console.error('Failed to load from Supabase:', err);
+            companies = [];
+        }
+    }
+
+    async function loadWatchlistFromSupabase() {
+        const userId = getUserId();
+        try {
+            const { data, error } = await supabase
+                .from('watchlists')
+                .select('company_id')
+                .eq('user_id', userId);
+
+            if (error) throw error;
+            watchlist = data ? data.map(item => item.company_id) : [];
+        } catch (err) {
+            console.warn('Could not load watchlist from Supabase');
+            watchlist = JSON.parse(localStorage.getItem('andes360_watchlist') || '[]');
+        }
+    }
+
+    // ==================== RENDERING ====================
+    function updateStats() {
+        const totalEl = document.getElementById('stat-total');
+        const dmaEl = document.getElementById('stat-dma');
+        if (totalEl) totalEl.textContent = companies.length;
+
+        const above = companies.filter(c => c.above_50dma).length;
+        if (dmaEl) dmaEl.innerHTML = `${above}<span class="text-xl text-zinc-400">/${companies.length}</span>`;
+    }
+
+    function renderTable(data) {
+        const tbody = document.getElementById('table-body');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        const countEl = document.getElementById('visible-count');
+        if (countEl) countEl.textContent = data.length;
+
+        data.forEach(c => {
+            const isWatched = watchlist.includes(c.id);
+            const riskClass = c.risk === 'Low' ? 'risk-low' : c.risk === 'Medium' ? 'risk-medium' : 'risk-high';
+            const dmaClass = c.above_50dma ? 'dma-above' : 'dma-below';
+            const dmaText = c.above_50dma ? 'Above' : 'Below';
+            const typeClass = `type-${(c.type || '').toLowerCase().replace(' ', '')}`;
+            const juris = c.jurisdiction || 'Various';
+            const score = c.overall_score || 65;
+
+            const row = document.createElement('tr');
+            row.className = 'company-row text-sm';
+            row.innerHTML = `
+                <td class="pl-4 py-2.5">
+                    <button onclick="toggleWatchlist(${c.id}, event)" class="watch-star text-lg ${isWatched ? 'text-amber-400' : 'text-slate-600'}">
+                        <i class="fa-solid fa-star"></i>
+                    </button>
+                </td>
+                <td class="font-medium py-2.5 pr-2">${c.name}</td>
+                <td class="py-2.5"><span class="font-mono text-xs bg-zinc-800 px-2 py-px rounded">${c.ticker}</span></td>
+                <td class="py-2.5"><span class="data-badge px-2 py-px rounded-2xl ${typeClass}">${c.type}</span></td>
+                <td class="py-2.5 text-zinc-300">${c.category}</td>
+                <td class="py-2.5 text-center"><span class="data-badge px-2 py-px rounded-2xl ${riskClass}">${c.risk}</span></td>
+                <td class="py-2.5 text-center"><span class="px-2 py-px text-[10px] rounded-xl bg-zinc-800 text-zinc-300">${juris}</span></td>
+                <td class="py-2.5 text-center"><span class="data-badge px-2 py-px rounded-2xl font-semibold bg-emerald-900 text-emerald-300">${score}</span></td>
+                <td class="py-2.5 text-right pr-3 tabular-nums font-medium">${formatMarketCap(c.market_cap)}</td>
+                <td class="py-2.5 text-right pr-3">$${c.current_price ? c.current_price.toFixed(2) : '—'}</td>
+                <td class="py-2.5 text-center"><span class="data-badge px-2 py-px rounded-2xl ${dmaClass}">${dmaText}</span></td>
+                <td class="py-2.5 pl-2 pr-1 text-xs text-zinc-400 max-w-[260px] line-clamp-2">
+                    ${c.comment || ''} <span class="text-amber-400/70 text-[10px]">(detailed thesis for premium users)</span>
+                </td>
+                <td class="py-2.5 pr-4 text-right">
+                    <button onclick="showDetail(${c.id})" class="text-xs px-3 py-1 border border-zinc-600 rounded-2xl hover:bg-zinc-800">Details</button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    function filterTable() {
+        const searchInput = document.getElementById('search');
+        const term = searchInput ? searchInput.value.toLowerCase() : '';
+        const filtered = companies.filter(c =>
+            c.name.toLowerCase().includes(term) || c.ticker.toLowerCase().includes(term)
+        );
+        renderTable(filtered);
+    }
+
+    // ==================== WATCHLIST (Supabase) ====================
+    async function toggleWatchlist(companyId, event) {
+        event.stopImmediatePropagation();
+        const userId = getUserId();
+
+        try {
+            if (watchlist.includes(companyId)) {
+                await supabase.from('watchlists').delete()
+                    .eq('user_id', userId)
+                    .eq('company_id', companyId);
+                watchlist = watchlist.filter(id => id !== companyId);
+            } else {
+                await supabase.from('watchlists').insert({ user_id: userId, company_id: companyId });
+                watchlist.push(companyId);
+            }
+            document.getElementById('watchlist-count').textContent = watchlist.length;
+            filterTable();
+        } catch (err) {
+            alert('Watchlist update failed: ' + err.message);
+        }
+    }
+
+    function showWatchlist() {
+        const filtered = companies.filter(c => watchlist.includes(c.id));
+        renderTable(filtered);
+    }
+
+    // ==================== ADD COMPANY (Supabase) ====================
+    async function submitNewCompany() {
+        const payload = {
+            name: document.getElementById('add-name').value.trim(),
+            ticker: document.getElementById('add-ticker').value.trim().toUpperCase(),
+            type: document.getElementById('add-type').value,
+            category: document.getElementById('add-category').value,
+            risk: document.getElementById('add-risk').value,
+            jurisdiction: document.getElementById('add-jurisdiction').value.trim() || 'Various',
+            overall_score: parseInt(document.getElementById('add-score').value) || 65,
+            comment: document.getElementById('add-comment').value.trim()
+        };
+
+        if (!payload.name || !payload.ticker) {
+            alert("Name and Ticker are required.");
+            return;
+        }
+
+        try {
+            const { error } = await supabase.from('companies').insert([payload]);
+            if (error) throw error;
+
+            alert('Company added to Supabase!');
+            hideAddModal();
+            await loadCompaniesFromSupabase();
+        } catch (err) {
+            alert('Error adding company: ' + err.message);
+        }
+    }
+
+    // ==================== UI HELPERS ====================
+    function showDetail(id) {
+        const c = companies.find(x => x.id === id);
+        if (c) alert(`${c.name}\n\n${c.comment || 'No thesis yet.'}`);
+    }
+
+    function showAddCompanyModal() {
+        document.getElementById('add-modal').classList.remove('hidden');
+        document.getElementById('add-modal').classList.add('flex');
+    }
+    function hideAddModal() {
+        document.getElementById('add-modal').classList.remove('flex');
+        document.getElementById('add-modal').classList.add('hidden');
+    }
+
+    function showSubscribeModal() {
+        document.getElementById('subscribe-modal').classList.remove('hidden');
+        document.getElementById('subscribe-modal').classList.add('flex');
+    }
+    function hideSubscribeModal() {
+        document.getElementById('subscribe-modal').classList.remove('flex');
+        document.getElementById('subscribe-modal').classList.add('hidden');
+    }
+
+    function refreshAllPrices() {
+        alert('Live price refresh will use a Netlify Function (to be added).');
+    }
+    function exportToExcel() {
+        alert('Excel export is a Premium feature.');
+    }
+
+    function updateStats() {
+        const totalEl = document.getElementById('stat-total');
+        if (totalEl) totalEl.textContent = companies.length;
+    }
+
+    // ==================== INITIALIZATION ====================
+    async function init() {
+        document.getElementById('watchlist-count').textContent = '0';
+
+        await loadCompaniesFromSupabase();
+        await loadWatchlistFromSupabase();
+
+        document.getElementById('watchlist-count').textContent = watchlist.length;
+        renderTable(companies);
+        updateStats();
+    }
+
+    window.onload = init;
+    </script>
+</body>
+</html>
