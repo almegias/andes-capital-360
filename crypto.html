@@ -55,7 +55,7 @@
                 </button>
 
                 <button onclick="showAddCryptoModal()" class="px-5 py-2 bg-gradient-to-r from-amber-400 to-yellow-500 text-zinc-950 font-semibold rounded-2xl">
-                    <i class="fa-solid fa-plus"></i> <span>Add Company</span>
+                    <i class="fa-solid fa-plus"></i> <span>Add Token</span>
                 </button>
                 <span class="text-[10px] text-amber-400 -ml-2">Premium</span>
 
@@ -63,7 +63,7 @@
                     <i class="fa-solid fa-credit-card"></i> <span>Subscribe $14.99/mo</span>
                 </button>
 
-                <button onclick="alert('Watchlist is a Premium feature on this page.')" class="px-4 py-2 border border-zinc-700 rounded-2xl hover:bg-zinc-900 flex items-center gap-x-2 text-sm">
+                <button onclick="showCryptoWatchlist()" class="px-4 py-2 border border-zinc-700 rounded-2xl hover:bg-zinc-900 flex items-center gap-x-2 text-sm">
                     <i class="fa-solid fa-star text-amber-400"></i> <span>Watchlist</span>
                 </button>
 
@@ -102,10 +102,14 @@
             <table class="w-full text-sm">
                 <thead>
                     <tr class="text-xs text-zinc-400 font-semibold border-b border-zinc-700">
-                        <th class="text-left py-3 pl-6">TICKER</th>
+                        <th class="w-8 pl-6"></th>
+                        <th class="text-left py-3">TICKER</th>
                         <th class="text-left py-3">NAME</th>
                         <th class="text-right py-3 pr-6">PRICE</th>
                         <th class="text-right py-3 pr-6">MARKET CAP</th>
+                        <th class="text-right py-3 pr-6">SCORE</th>
+                        <th class="text-center py-3">50-DAY MA</th>
+                        <th class="text-left py-3 pl-2">COMMENT</th>
                     </tr>
                 </thead>
                 <tbody id="table-body" class="divide-y divide-zinc-800"></tbody>
@@ -123,6 +127,7 @@
         ];
 
         let data = [...cryptos];
+        let cryptoWatchlist = JSON.parse(localStorage.getItem('cryptoWatchlist') || '[]');
 
         function formatMarketCap(value) {
             if (!value) return '—';
@@ -131,18 +136,30 @@
             return '$' + (value / 1e6).toFixed(0) + 'M';
         }
 
-        function renderTable() {
+        function renderTable(filteredData = null) {
             const tbody = document.getElementById('table-body');
             tbody.innerHTML = '';
 
-            data.forEach(item => {
+            const toRender = filteredData || data;
+
+            toRender.forEach((item) => {
+                const isWatched = cryptoWatchlist.includes(item.ticker);
+                const dmaText = '—';
                 const row = document.createElement('tr');
                 row.className = 'hover:bg-zinc-800/50';
                 row.innerHTML = `
-                    <td class="pl-6 py-3 font-mono text-amber-400 font-semibold">${item.ticker}</td>
+                    <td class="pl-6 py-3">
+                        <button onclick="toggleCryptoWatchlist('${item.ticker}', this)" class="text-lg ${isWatched ? 'text-amber-400' : 'text-slate-600'}">
+                            <i class="fa-solid fa-star"></i>
+                        </button>
+                    </td>
+                    <td class="font-mono text-amber-400 font-semibold">${item.ticker}</td>
                     <td class="py-3">${item.name}</td>
                     <td class="text-right pr-6 tabular-nums font-medium">$${item.price ? item.price.toLocaleString(undefined, {minimumFractionDigits: 4, maximumFractionDigits: 4}) : '—'}</td>
                     <td class="text-right pr-6 tabular-nums font-medium">${formatMarketCap(item.market_cap)}</td>
+                    <td class="text-right pr-6 tabular-nums font-medium">${item.score || 60}</td>
+                    <td class="text-center py-3">${dmaText}</td>
+                    <td class="py-3 text-xs text-zinc-400">${item.comment || ''}</td>
                 `;
                 tbody.appendChild(row);
             });
@@ -258,16 +275,16 @@
                 modal.className = 'fixed inset-0 bg-black/80 z-[110] flex items-center justify-center p-4';
                 modal.innerHTML = `
                     <div onclick="event.stopImmediatePropagation()" class="modal bg-zinc-900 border border-zinc-700 rounded-3xl w-full max-w-md p-6">
-                        <div class="font-semibold text-xl mb-4">Add New Crypto</div>
+                        <div class="font-semibold text-xl mb-4">Add New Token</div>
                         <div>
-                            <label class="text-xs text-zinc-400 block mb-1">CRYPTO NAME OR TICKER</label>
+                            <label class="text-xs text-zinc-400 block mb-1">TOKEN NAME OR TICKER</label>
                             <input id="add-crypto-input" type="text" placeholder="e.g. Bitcoin or BTC" 
                                    class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-2.5 mb-4">
                             <p class="text-[10px] text-zinc-500 mb-4">The site will try to fetch live price data from CoinGecko.</p>
                         </div>
                         <div class="flex gap-x-3">
                             <button onclick="hideAddCryptoModal()" class="flex-1 py-3 rounded-2xl border border-zinc-700">Cancel</button>
-                            <button onclick="submitAddCrypto()" class="flex-1 py-3 rounded-2xl bg-gradient-to-r from-amber-400 to-yellow-500 text-zinc-950 font-semibold">Add Crypto</button>
+                            <button onclick="submitAddCrypto()" class="flex-1 py-3 rounded-2xl bg-gradient-to-r from-amber-400 to-yellow-500 text-zinc-950 font-semibold">Add Token</button>
                         </div>
                     </div>
                 `;
@@ -295,39 +312,81 @@
                 return;
             }
 
-            const isTicker = raw.length <= 6 && /^[A-Za-z]+$/.test(raw);
+            const query = raw.toLowerCase();
+
+            // Avoid duplicates by ticker (we'll set it after search)
+            // First try to resolve proper name + id via CoinGecko search
+            let resolvedName = raw;
+            let resolvedId = null;
+            let resolvedTicker = raw.toUpperCase().slice(0, 8);
+
+            try {
+                const searchRes = await fetch(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(query)}`);
+                if (searchRes.ok) {
+                    const searchJson = await searchRes.json();
+                    if (searchJson.coins && searchJson.coins.length > 0) {
+                        const best = searchJson.coins[0];
+                        resolvedName = best.name;
+                        resolvedId = best.id;
+                        if (best.symbol) resolvedTicker = best.symbol.toUpperCase();
+                    }
+                }
+            } catch (e) {}
+
             const newItem = {
-                ticker: isTicker ? raw.toUpperCase() : raw.toUpperCase().slice(0,8),
-                name: !isTicker ? raw : raw.toUpperCase()
+                ticker: resolvedTicker,
+                name: resolvedName,
+                price: null,
+                market_cap: null,
+                score: 60,
+                above_50dma: null,
+                comment: "User added"
             };
 
             if (data.some(d => d.ticker === newItem.ticker)) {
-                alert("This ticker is already in the list.");
+                alert("This token is already in the list.");
                 hideAddCryptoModal();
                 return;
             }
 
-            // Try to fetch from CoinGecko (reuse the same mapping logic)
-            const tempMap = { [newItem.ticker]: newItem.name.toLowerCase() };
-            const ids = Object.values(tempMap).join(',');
-
-            try {
-                const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_market_cap=true`);
-                if (res.ok) {
-                    const json = await res.json();
-                    const cgId = Object.values(tempMap)[0];
-                    if (json[cgId]) {
-                        const info = json[cgId];
-                        if (info.usd != null) newItem.price = info.usd;
-                        if (info.usd_market_cap != null) newItem.market_cap = info.usd_market_cap;
+            // Fetch price data
+            if (resolvedId) {
+                try {
+                    const priceRes = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${resolvedId}&vs_currencies=usd&include_market_cap=true`);
+                    if (priceRes.ok) {
+                        const priceJson = await priceRes.json();
+                        if (priceJson[resolvedId]) {
+                            const info = priceJson[resolvedId];
+                            if (info.usd != null) newItem.price = info.usd;
+                            if (info.usd_market_cap != null) newItem.market_cap = info.usd_market_cap;
+                        }
                     }
-                }
-            } catch (e) {}
+                } catch (e) {}
+            }
 
             data.push(newItem);
             saveToLocalStorage();
             renderTable();
             hideAddCryptoModal();
+        }
+
+        // Watchlist helpers for Crypto
+        function toggleCryptoWatchlist(ticker, element) {
+            if (cryptoWatchlist.includes(ticker)) {
+                cryptoWatchlist = cryptoWatchlist.filter(t => t !== ticker);
+                element.classList.remove('text-amber-400');
+                element.classList.add('text-slate-600');
+            } else {
+                cryptoWatchlist.push(ticker);
+                element.classList.remove('text-slate-600');
+                element.classList.add('text-amber-400');
+            }
+            localStorage.setItem('cryptoWatchlist', JSON.stringify(cryptoWatchlist));
+        }
+
+        function showCryptoWatchlist() {
+            const filtered = data.filter(item => cryptoWatchlist.includes(item.ticker));
+            renderTable(filtered);
         }
     </script>
 </body>
