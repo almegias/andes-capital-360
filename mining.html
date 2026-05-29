@@ -107,11 +107,6 @@
                     <span id="refresh-btn-text">Refresh Prices</span>
                 </button>
                 
-                <button onclick="exportToExcel()" class="px-4 py-2 border border-zinc-700 rounded-2xl hover:bg-zinc-900">
-                    <i class="fa-solid fa-file-excel"></i> <span>Export Excel</span>
-                </button>
-                <span class="text-[10px] text-amber-400 -ml-2">Premium</span>
-
                 <button onclick="showAddCompanyModal()" class="px-5 py-2 bg-gradient-to-r from-amber-400 to-yellow-500 text-zinc-950 font-semibold rounded-2xl">
                     <i class="fa-solid fa-plus"></i> <span>Add Company</span>
                 </button>
@@ -141,24 +136,6 @@ informational and educational purposes only and does not constitute
 investment advice. Junior mining stocks are highly speculative and 
 volatile. Always do your own due diligence.
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- STATS -->
-    <div class="border-b border-zinc-800 bg-zinc-900/60">
-        <div class="max-w-screen-2xl mx-auto px-6 py-5 grid grid-cols-3 gap-px bg-zinc-800 text-sm">
-            <div class="bg-zinc-950 px-5 py-4">
-                <div class="text-xs text-zinc-500">TOTAL TRACKED</div>
-                <div id="stat-total" class="text-3xl font-semibold tabular-nums">96</div>
-            </div>
-            <div class="bg-zinc-950 px-5 py-4">
-                <div class="text-xs text-zinc-500">ABOVE 50-DAY MA</div>
-                <div id="stat-dma" class="text-3xl font-semibold tabular-nums">61<span class="text-xl text-zinc-400">/96</span></div>
-            </div>
-            <div class="bg-zinc-950 px-5 py-4">
-                <div class="text-xs text-zinc-500">MEDIAN RISK</div>
-                <div class="text-3xl font-semibold">High</div>
             </div>
         </div>
     </div>
@@ -2342,44 +2319,12 @@ volatile. Always do your own due diligence.
                 <div class="font-semibold text-xl">Add New Company</div>
                 <button onclick="hideAddModal()"><i class="fa-solid fa-times fa-lg"></i></button>
             </div>
-            <div class="p-6 grid grid-cols-2 gap-4 text-sm">
-                <div class="col-span-2">
-                    <label class="text-xs text-zinc-400 block mb-1">COMPANY NAME</label>
-                    <input id="add-name" type="text" class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-2.5">
-                </div>
+            <div class="p-6 text-sm">
                 <div>
-                    <label class="text-xs text-zinc-400 block mb-1">US TICKER</label>
-                    <input id="add-ticker" type="text" class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-2.5 uppercase">
-                </div>
-                <div>
-                    <label class="text-xs text-zinc-400 block mb-1">JURISDICTION</label>
-                    <input id="add-jurisdiction" type="text" class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-2.5" value="Various">
-                </div>
-                <div>
-                    <label class="text-xs text-zinc-400 block mb-1">TYPE</label>
-                    <select id="add-type" class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-2.5">
-                        <option selected="selected">Gold</option><option>Silver</option><option>Copper</option><option>Critical Minerals</option><option>Diversified</option><option>Uranium</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="text-xs text-zinc-400 block mb-1">CATEGORY</label>
-                    <select id="add-category" class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-2.5">
-                        <option selected="selected">Producer</option><option>Developer</option><option>Royalty</option><option>Explorer</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="text-xs text-zinc-400 block mb-1">RISK</label>
-                    <select id="add-risk" class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-2.5">
-                        <option selected="selected">Low</option><option>Medium</option><option>High</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="text-xs text-zinc-400 block mb-1">OVERALL SCORE (1-100)</label>
-                    <input id="add-score" type="number" value="65" class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-2.5">
-                </div>
-                <div class="col-span-2">
-                    <label class="text-xs text-zinc-400 block mb-1">SHORT COMMENT</label>
-                    <input id="add-comment" type="text" class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-2.5">
+                    <label class="text-xs text-zinc-400 block mb-1">COMPANY NAME OR TICKER</label>
+                    <input id="add-name-or-ticker" type="text" placeholder="e.g. Banyan Gold or BYN" 
+                           class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-2.5">
+                    <p class="text-[10px] text-zinc-500 mt-1">The site will try to auto-fill the rest of the information.</p>
                 </div>
             </div>
             <div class="px-6 py-5 bg-zinc-950 border-t flex gap-x-3">
@@ -2517,12 +2462,47 @@ volatile. Always do your own due diligence.
         });
     }
 
+    let activeFilters = { type: [], category: [], risk: [] };
+
+    function toggleFilter(element, filterType, value) {
+        if (!activeFilters[filterType]) activeFilters[filterType] = [];
+
+        const index = activeFilters[filterType].indexOf(value);
+        if (index > -1) {
+            activeFilters[filterType].splice(index, 1);
+            element.classList.remove('active');
+        } else {
+            activeFilters[filterType].push(value);
+            element.classList.add('active');
+        }
+        filterTable();
+    }
+
     function filterTable() {
         const searchInput = document.getElementById('search');
         const term = searchInput ? searchInput.value.toLowerCase() : '';
-        const filtered = companies.filter(c =>
-            c.name.toLowerCase().includes(term) || c.ticker.toLowerCase().includes(term)
-        );
+
+        const filtered = companies.filter(c => {
+            // Search term
+            const matchesSearch = !term || 
+                c.name.toLowerCase().includes(term) || 
+                c.ticker.toLowerCase().includes(term);
+
+            // Type filter
+            const matchesType = activeFilters.type.length === 0 || 
+                activeFilters.type.includes(c.type);
+
+            // Category filter
+            const matchesCategory = activeFilters.category.length === 0 || 
+                activeFilters.category.includes(c.category);
+
+            // Risk filter
+            const matchesRisk = activeFilters.risk.length === 0 || 
+                activeFilters.risk.includes(c.risk);
+
+            return matchesSearch && matchesType && matchesCategory && matchesRisk;
+        });
+
         renderTable(filtered);
     }
 
@@ -2555,27 +2535,59 @@ volatile. Always do your own due diligence.
 
     // ==================== ADD COMPANY (Supabase) ====================
     async function submitNewCompany() {
-        const payload = {
-            name: document.getElementById('add-name').value.trim(),
-            ticker: document.getElementById('add-ticker').value.trim().toUpperCase(),
-            type: document.getElementById('add-type').value,
-            category: document.getElementById('add-category').value,
-            risk: document.getElementById('add-risk').value,
-            jurisdiction: document.getElementById('add-jurisdiction').value.trim() || 'Various',
-            overall_score: parseInt(document.getElementById('add-score').value) || 65,
-            comment: document.getElementById('add-comment').value.trim()
-        };
+        const input = document.getElementById('add-name-or-ticker');
+        if (!input) return;
 
-        if (!payload.name || !payload.ticker) {
-            alert("Name and Ticker are required.");
+        const rawValue = input.value.trim();
+        if (!rawValue) {
+            alert("Please enter a company name or ticker.");
             return;
         }
+
+        // Basic heuristic: if it looks like a ticker (short, all caps or letters), treat as ticker
+        const isLikelyTicker = rawValue.length <= 6 && /^[A-Za-z.]+$/.test(rawValue);
+        const ticker = isLikelyTicker ? rawValue.toUpperCase() : '';
+        const nameGuess = !isLikelyTicker ? rawValue : rawValue.toUpperCase();
+
+        // Default values
+        let payload = {
+            name: nameGuess,
+            ticker: ticker,
+            type: 'Gold',
+            category: 'Explorer',
+            risk: 'High',
+            jurisdiction: 'Various',
+            overall_score: 60,
+            comment: 'User requested addition. Detailed review pending.'
+        };
+
+        // Try to fetch live price data
+        if (ticker) {
+            try {
+                const res = await fetch(`/.netlify/functions/refresh-prices?ticker=${ticker}`);
+                if (res.ok) {
+                    const priceData = await res.json();
+                    if (priceData.price != null) {
+                        payload.current_price = priceData.price;
+                        payload.above_50dma = priceData.above_50dma;
+                    }
+                    if (priceData.market_cap) {
+                        payload.market_cap = priceData.market_cap;
+                    }
+                }
+            } catch (e) {
+                console.warn("Could not fetch live price for new company");
+            }
+        }
+
+        // If we only have a name and no ticker, we can leave ticker blank or ask user later.
+        // For now we allow it.
 
         try {
             const { error } = await supabaseClient.from('companies').insert([payload]);
             if (error) throw error;
 
-            alert('Company added to Supabase!');
+            alert('Company added! The site attempted to auto-fill price data. You can edit details later if needed.');
             hideAddModal();
             await loadCompaniesFromSupabase();
         } catch (err) {
@@ -2592,6 +2604,9 @@ volatile. Always do your own due diligence.
     function showAddCompanyModal() {
         document.getElementById('add-modal').classList.remove('hidden');
         document.getElementById('add-modal').classList.add('flex');
+        // Clear the single input field
+        const input = document.getElementById('add-name-or-ticker');
+        if (input) input.value = '';
     }
     function hideAddModal() {
         document.getElementById('add-modal').classList.remove('flex');
@@ -2698,10 +2713,6 @@ volatile. Always do your own due diligence.
             );
         }
     }
-    function exportToExcel() {
-        alert('Excel export is a Premium feature.');
-    }
-
     // ==================== INITIALIZATION ====================
     async function init() {
         document.getElementById('watchlist-count').textContent = '0';

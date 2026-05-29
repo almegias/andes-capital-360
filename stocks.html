@@ -63,6 +63,10 @@
                     <i class="fa-solid fa-credit-card"></i> <span>Subscribe $14.99/mo</span>
                 </button>
 
+                <button onclick="showStockWatchlist()" class="px-4 py-2 border border-zinc-700 rounded-2xl hover:bg-zinc-900 flex items-center gap-x-2 text-sm">
+                    <i class="fa-solid fa-star text-amber-400"></i> <span>Watchlist</span>
+                </button>
+
                 <a href="index.html" 
                    class="px-4 py-2 border border-zinc-700 rounded-2xl hover:bg-zinc-900 flex items-center gap-x-2 text-sm">
                     ← Back to Home
@@ -76,17 +80,21 @@
         <div class="max-w-screen-2xl mx-auto px-6 pt-8 pb-6">
             <h1 class="text-4xl font-display font-semibold tracking-tighter">Andes Capital 360's Selection</h1>
             <p class="mt-2 max-w-3xl text-sm text-zinc-400">
-                High-conviction ideas outside the mining space. Junior mining stocks are highly speculative and volatile. Always do your own due diligence.
+                Disclaimer: This selection is for informational and educational purposes only and does not constitute investment advice.
             </p>
         </div>
     </div>
 
-    <div class="max-w-screen-2xl mx-auto px-6 pt-6 pb-4">
+    <div class="max-w-screen-2xl mx-auto px-6 pt-6 pb-4 flex items-center gap-x-4">
         <button onclick="refreshPrices()" 
                 class="px-5 py-2.5 border border-zinc-700 rounded-2xl hover:bg-zinc-900 flex items-center gap-x-2 text-sm">
             <i class="fa-solid fa-sync fa-sm"></i> 
             <span>Refresh Prices</span>
         </button>
+
+        <input type="text" id="search-stocks" placeholder="Search ticker or name..." 
+               onkeyup="filterStocksTable()"
+               class="px-4 py-2 bg-zinc-900 border border-zinc-700 rounded-2xl text-sm w-64 focus:outline-none focus:border-amber-400">
     </div>
 
     <div class="max-w-screen-2xl mx-auto px-6 pb-12">
@@ -94,7 +102,8 @@
             <table class="w-full text-sm">
                 <thead>
                     <tr class="text-xs text-zinc-400 font-semibold border-b border-zinc-700">
-                        <th class="text-left py-3 pl-6">TICKER</th>
+                        <th class="w-8 pl-6"></th>
+                    <th class="text-left py-3">TICKER</th>
                         <th class="text-left py-3">NAME</th>
                         <th class="text-right py-3 pr-6">PRICE</th>
                         <th class="text-right py-3 pr-6">MARKET CAP</th>
@@ -115,6 +124,7 @@
         ];
 
         let data = [...stocks];
+        let stockWatchlist = JSON.parse(localStorage.getItem('stockWatchlist') || '[]');
 
         function formatMarketCap(value) {
             if (!value) return '—';
@@ -123,21 +133,47 @@
             return '$' + (value / 1e6).toFixed(0) + 'M';
         }
 
-        function renderTable() {
+        function renderTable(filteredData = null) {
             const tbody = document.getElementById('table-body');
             tbody.innerHTML = '';
 
-            data.forEach(item => {
+            const toRender = filteredData || data;
+
+            toRender.forEach((item, index) => {
+                const isWatched = stockWatchlist.includes(item.ticker);
                 const row = document.createElement('tr');
                 row.className = 'hover:bg-zinc-800/50';
                 row.innerHTML = `
-                    <td class="pl-6 py-3 font-mono text-amber-400 font-semibold">${item.ticker}</td>
+                    <td class="pl-6 py-3">
+                        <button onclick="toggleStockWatchlist('${item.ticker}', this)" class="text-lg ${isWatched ? 'text-amber-400' : 'text-slate-600'}">
+                            <i class="fa-solid fa-star"></i>
+                        </button>
+                    </td>
+                    <td class="font-mono text-amber-400 font-semibold">${item.ticker}</td>
                     <td class="py-3">${item.name}</td>
                     <td class="text-right pr-6 tabular-nums font-medium">$${item.price ? item.price.toFixed(2) : '—'}</td>
                     <td class="text-right pr-6 tabular-nums font-medium">${formatMarketCap(item.market_cap)}</td>
                 `;
                 tbody.appendChild(row);
             });
+        }
+
+        function toggleStockWatchlist(ticker, element) {
+            if (stockWatchlist.includes(ticker)) {
+                stockWatchlist = stockWatchlist.filter(t => t !== ticker);
+                element.classList.remove('text-amber-400');
+                element.classList.add('text-slate-600');
+            } else {
+                stockWatchlist.push(ticker);
+                element.classList.remove('text-slate-600');
+                element.classList.add('text-amber-400');
+            }
+            localStorage.setItem('stockWatchlist', JSON.stringify(stockWatchlist));
+        }
+
+        function showStockWatchlist() {
+            const filtered = data.filter(item => stockWatchlist.includes(item.ticker));
+            renderTable(filtered);
         }
 
         const STORAGE_KEY = 'andes_stocks_prices';
@@ -208,17 +244,24 @@
         }
 
         async function initializePrices() {
-            // Try to load previously saved prices first
             const hasSavedData = loadFromLocalStorage();
 
             if (hasSavedData) {
                 renderTable();
-                // Still fetch fresh data in background so user gets latest
                 fetchLivePrices(false);
             } else {
-                // No saved data — fetch fresh on first load
                 await fetchLivePrices(true);
             }
+        }
+
+        function filterStocksTable() {
+            const searchTerm = document.getElementById('search-stocks').value.toLowerCase();
+            const rows = document.querySelectorAll('#table-body tr');
+
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchTerm) ? '' : 'none';
+            });
         }
 
         // Start
