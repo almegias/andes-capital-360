@@ -54,7 +54,7 @@
                     <span id="refresh-btn-text">Refresh Prices</span>
                 </button>
 
-                <button onclick="alert('Add Company is a Premium feature.')" class="px-5 py-2 bg-gradient-to-r from-amber-400 to-yellow-500 text-zinc-950 font-semibold rounded-2xl">
+                <button onclick="showAddStockModal()" class="px-5 py-2 bg-gradient-to-r from-amber-400 to-yellow-500 text-zinc-950 font-semibold rounded-2xl">
                     <i class="fa-solid fa-plus"></i> <span>Add Company</span>
                 </button>
                 <span class="text-[10px] text-amber-400 -ml-2">Premium</span>
@@ -266,6 +266,82 @@
 
         // Start
         initializePrices();
+
+        // ==================== ADD STOCK (Simplified) ====================
+        function showAddStockModal() {
+            // Create a simple modal dynamically if it doesn't exist
+            let modal = document.getElementById('add-stock-modal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'add-stock-modal';
+                modal.className = 'fixed inset-0 bg-black/80 z-[110] flex items-center justify-center p-4';
+                modal.innerHTML = `
+                    <div onclick="event.stopImmediatePropagation()" class="modal bg-zinc-900 border border-zinc-700 rounded-3xl w-full max-w-md p-6">
+                        <div class="font-semibold text-xl mb-4">Add New Stock</div>
+                        <div>
+                            <label class="text-xs text-zinc-400 block mb-1">STOCK NAME OR TICKER</label>
+                            <input id="add-stock-input" type="text" placeholder="e.g. NVIDIA or NVDA" 
+                                   class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-2.5 mb-4">
+                            <p class="text-[10px] text-zinc-500 mb-4">The site will try to fetch live price data.</p>
+                        </div>
+                        <div class="flex gap-x-3">
+                            <button onclick="hideAddStockModal()" class="flex-1 py-3 rounded-2xl border border-zinc-700">Cancel</button>
+                            <button onclick="submitAddStock()" class="flex-1 py-3 rounded-2xl bg-gradient-to-r from-amber-400 to-yellow-500 text-zinc-950 font-semibold">Add Stock</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            }
+            modal.style.display = 'flex';
+            setTimeout(() => {
+                const input = document.getElementById('add-stock-input');
+                if (input) input.focus();
+            }, 100);
+        }
+
+        function hideAddStockModal() {
+            const modal = document.getElementById('add-stock-modal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        async function submitAddStock() {
+            const input = document.getElementById('add-stock-input');
+            if (!input) return;
+
+            const raw = input.value.trim();
+            if (!raw) {
+                alert("Please enter a stock name or ticker.");
+                return;
+            }
+
+            const isTicker = raw.length <= 6 && /^[A-Za-z.]+$/.test(raw);
+            const newItem = {
+                ticker: isTicker ? raw.toUpperCase() : raw.toUpperCase().slice(0,6),
+                name: !isTicker ? raw : raw.toUpperCase()
+            };
+
+            // Avoid duplicates
+            if (data.some(d => d.ticker === newItem.ticker)) {
+                alert("This ticker is already in the list.");
+                hideAddStockModal();
+                return;
+            }
+
+            // Try to fetch live price
+            try {
+                const res = await fetch(`/.netlify/functions/refresh-prices?ticker=${newItem.ticker}`);
+                if (res.ok) {
+                    const d = await res.json();
+                    if (d.price != null) newItem.price = d.price;
+                    if (d.market_cap != null) newItem.market_cap = d.market_cap;
+                }
+            } catch (e) {}
+
+            data.push(newItem);
+            saveToLocalStorage();
+            renderTable();
+            hideAddStockModal();
+        }
     </script>
 </body>
 </html>
