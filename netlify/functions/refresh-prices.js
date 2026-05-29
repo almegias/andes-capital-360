@@ -54,10 +54,13 @@ async function fetchYahoo(ticker, range = '3mo') {
     sma50 = closes.reduce((sum, v) => sum + v, 0) / closes.length;
   }
 
+  const meta = result.meta || {};
+
   return {
     price: Number(price.toFixed(4)),
     above_50dma: sma50 != null ? (price > sma50) : null,
     sma50: sma50 != null ? Number(sma50.toFixed(2)) : null,
+    name: meta.shortName || meta.longName || null,
   };
 }
 
@@ -104,6 +107,7 @@ exports.handler = async (event) => {
             ticker: raw,
             ...data,
             market_cap: marketCap,
+            name: data.name || null,
             yahoo_symbol: sym,
           }),
         };

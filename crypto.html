@@ -191,8 +191,10 @@
                         if (match) {
                             match.price = savedItem.price;
                             match.market_cap = savedItem.market_cap;
+                            if (savedItem.name) match.name = savedItem.name;
                         }
                     });
+                    data.sort((a, b) => a.name.localeCompare(b.name));
                     return true;
                 }
             } catch (e) {}
@@ -228,6 +230,9 @@
             } catch (e) {
                 console.error('Failed to fetch crypto prices from CoinGecko', e);
             }
+
+            // Keep list sorted after refresh
+            data.sort((a, b) => a.name.localeCompare(b.name));
 
             renderTable();
             saveToLocalStorage();
@@ -365,6 +370,9 @@
             }
 
             data.push(newItem);
+            // Sort alphabetically by name
+            data.sort((a, b) => a.name.localeCompare(b.name));
+
             saveToLocalStorage();
             renderTable();
             hideAddCryptoModal();

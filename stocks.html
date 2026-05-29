@@ -202,8 +202,11 @@
                         if (match) {
                             match.price = savedItem.price;
                             match.market_cap = savedItem.market_cap;
+                            if (savedItem.name) match.name = savedItem.name;
                         }
                     });
+                    // Ensure sorted
+                    data.sort((a, b) => a.name.localeCompare(b.name));
                     return true;
                 }
             } catch (e) {}
@@ -234,6 +237,9 @@
                 } catch (e) {}
                 await new Promise(r => setTimeout(r, 150));
             }
+
+            // Keep list sorted after refresh
+            data.sort((a, b) => a.name.localeCompare(b.name));
 
             renderTable();
             saveToLocalStorage();
@@ -332,7 +338,7 @@
 
             const newItem = {
                 ticker: ticker,
-                name: ticker,           // temporary, will be overwritten
+                name: ticker,           // will be overwritten if we get a real name
                 price: null,
                 market_cap: null,
                 score: 60,
@@ -340,42 +346,23 @@
                 comment: "User added"
             };
 
-            // Fetch real name + price data from Yahoo
+            // Use the Netlify function (reliable + now returns name)
             try {
-                const res = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`);
+                const res = await fetch(`/.netlify/functions/refresh-prices?ticker=${ticker}`);
                 if (res.ok) {
-                    const json = await res.json();
-                    const result = json?.chart?.result?.[0];
-                    if (result) {
-                        const meta = result.meta || {};
-                        if (meta.shortName) newItem.name = meta.shortName;
-                        if (meta.regularMarketPrice) newItem.price = meta.regularMarketPrice;
-
-                        // Also try to get market cap if present
-                        const quote = result.indicators?.quote?.[0];
-                        if (quote?.marketCap?.[0]) {
-                            newItem.market_cap = quote.marketCap[0];
-                        }
-                    }
+                    const d = await res.json();
+                    if (d.price != null) newItem.price = d.price;
+                    if (d.market_cap != null) newItem.market_cap = d.market_cap;
+                    if (d.name) newItem.name = d.name;   // ← This is the key fix
                 }
             } catch (e) {
-                console.warn("Could not fetch Yahoo data for", ticker);
-            }
-
-            // Fallback: if we still don't have a proper name, keep the ticker as name
-            if (newItem.name === ticker) {
-                // Try one more time via the existing function for price data
-                try {
-                    const res2 = await fetch(`/.netlify/functions/refresh-prices?ticker=${ticker}`);
-                    if (res2.ok) {
-                        const d = await res2.json();
-                        if (d.price != null) newItem.price = d.price;
-                        if (d.market_cap != null) newItem.market_cap = d.market_cap;
-                    }
-                } catch (e) {}
+                console.warn("Could not fetch data for new stock", ticker);
             }
 
             data.push(newItem);
+            // Sort alphabetically by name
+            data.sort((a, b) => a.name.localeCompare(b.name));
+
             saveToLocalStorage();
             renderTable();
             hideAddStockModal();
