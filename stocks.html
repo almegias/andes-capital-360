@@ -140,37 +140,89 @@
             });
         }
 
-        async function refreshPrices() {
+        const STORAGE_KEY = 'andes_stocks_prices';
+
+        function saveToLocalStorage() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+            } catch (e) {}
+        }
+
+        function loadFromLocalStorage() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    // Merge saved prices into current data structure
+                    parsed.forEach(savedItem => {
+                        const match = data.find(d => d.ticker === savedItem.ticker);
+                        if (match) {
+                            match.price = savedItem.price;
+                            match.market_cap = savedItem.market_cap;
+                        }
+                    });
+                    return true;
+                }
+            } catch (e) {}
+            return false;
+        }
+
+        async function fetchLivePrices(showLoading = true) {
             const btnText = document.getElementById('refresh-btn-text');
-            const original = btnText.textContent;
-            btnText.textContent = 'Refreshing...';
+            const original = btnText ? btnText.textContent : '';
+
+            if (showLoading && btnText) {
+                btnText.textContent = 'Refreshing...';
+            }
+
+            let successCount = 0;
 
             for (let item of data) {
                 try {
                     const res = await fetch(`/.netlify/functions/refresh-prices?ticker=${item.ticker}`);
                     if (res.ok) {
                         const d = await res.json();
-                        if (d.price) {
+                        if (d.price != null) {
                             item.price = d.price;
-                            if (d.market_cap) item.market_cap = d.market_cap;
+                            if (d.market_cap != null) item.market_cap = d.market_cap;
+                            successCount++;
                         }
                     }
                 } catch (e) {}
-                await new Promise(r => setTimeout(r, 180));
+                await new Promise(r => setTimeout(r, 150));
             }
 
             renderTable();
-            btnText.textContent = 'Done';
-            setTimeout(() => btnText.textContent = original, 1800);
+            saveToLocalStorage();
+
+            if (showLoading && btnText) {
+                btnText.textContent = 'Done';
+                setTimeout(() => btnText.textContent = original, 1400);
+            }
+
+            return successCount;
         }
 
-        // Initial load with some demo prices (will be overwritten on refresh)
-        data.forEach((s, i) => {
-            s.price = [245, 3.8, 118, 9.2, 272][i];
-            s.market_cap = [780e9, 420e6, 2.9e12, 2.8e9, 870e9][i];
-        });
+        async function refreshPrices() {
+            await fetchLivePrices(true);
+        }
 
-        renderTable();
+        async function initializePrices() {
+            // Try to load previously saved prices first
+            const hasSavedData = loadFromLocalStorage();
+
+            if (hasSavedData) {
+                renderTable();
+                // Still fetch fresh data in background so user gets latest
+                fetchLivePrices(false);
+            } else {
+                // No saved data — fetch fresh on first load
+                await fetchLivePrices(true);
+            }
+        }
+
+        // Start
+        initializePrices();
     </script>
 </body>
 </html>

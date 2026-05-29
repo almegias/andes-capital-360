@@ -140,37 +140,96 @@
             });
         }
 
-        async function refreshPrices() {
-            const btnText = document.getElementById('refresh-btn-text');
-            const original = btnText.textContent;
-            btnText.textContent = 'Refreshing...';
+        const STORAGE_KEY = 'andes_crypto_prices';
 
-            for (let item of data) {
-                try {
-                    const res = await fetch(`/.netlify/functions/refresh-prices?ticker=${item.ticker}`);
-                    if (res.ok) {
-                        const d = await res.json();
-                        if (d.price) {
-                            item.price = d.price;
-                            if (d.market_cap) item.market_cap = d.market_cap;
+        const coingeckoMap = {
+            'BTC': 'bitcoin',
+            'ETH': 'ethereum',
+            'SOL': 'solana',
+            'FARTCOIN': 'fartcoin',
+            'USELESS': 'useless'
+        };
+
+        function saveToLocalStorage() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+            } catch (e) {}
+        }
+
+        function loadFromLocalStorage() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    parsed.forEach(savedItem => {
+                        const match = data.find(d => d.ticker === savedItem.ticker);
+                        if (match) {
+                            match.price = savedItem.price;
+                            match.market_cap = savedItem.market_cap;
                         }
+                    });
+                    return true;
+                }
+            } catch (e) {}
+            return false;
+        }
+
+        async function fetchLivePrices(showLoading = true) {
+            const btnText = document.getElementById('refresh-btn-text');
+            const original = btnText ? btnText.textContent : '';
+
+            if (showLoading && btnText) {
+                btnText.textContent = 'Refreshing...';
+            }
+
+            const ids = Object.values(coingeckoMap).join(',');
+            const url = `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_market_cap=true`;
+
+            try {
+                const res = await fetch(url);
+                if (!res.ok) throw new Error('CoinGecko request failed');
+
+                const json = await res.json();
+
+                data.forEach(item => {
+                    const cgId = coingeckoMap[item.ticker];
+                    if (cgId && json[cgId]) {
+                        const info = json[cgId];
+                        if (info.usd != null) item.price = info.usd;
+                        if (info.usd_market_cap != null) item.market_cap = info.usd_market_cap;
                     }
-                } catch (e) {}
-                await new Promise(r => setTimeout(r, 180));
+                });
+
+            } catch (e) {
+                console.error('Failed to fetch crypto prices from CoinGecko', e);
             }
 
             renderTable();
-            btnText.textContent = 'Done';
-            setTimeout(() => btnText.textContent = original, 1800);
+            saveToLocalStorage();
+
+            if (showLoading && btnText) {
+                btnText.textContent = 'Done';
+                setTimeout(() => btnText.textContent = original, 1400);
+            }
         }
 
-        // Initial demo values
-        data.forEach((c, i) => {
-            c.price = [67200, 2450, 0.78, 138, 0.0032][i];
-            c.market_cap = [1.33e12, 295e9, 780e6, 64e9, 3.2e6][i];
-        });
+        async function refreshPrices() {
+            await fetchLivePrices(true);
+        }
 
-        renderTable();
+        async function initializePrices() {
+            const hasSavedData = loadFromLocalStorage();
+
+            if (hasSavedData) {
+                renderTable();
+                // Background refresh for latest data
+                fetchLivePrices(false);
+            } else {
+                await fetchLivePrices(true);
+            }
+        }
+
+        initializePrices();
     </script>
 </body>
 </html>
