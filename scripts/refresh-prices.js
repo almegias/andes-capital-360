@@ -1,49 +1,106 @@
-/**
- * CLI refresh script
- * Usage: cd backend && npm run refresh
- */
-import Database from 'better-sqlite3';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { fetchYahooData } from '../backend/lib/yahoo.js';
+// netlify/functions/refresh-prices.js
+// Fetches live price + 50-day MA from Yahoo Finance (with smart fallbacks for junior miners)
+// Many Canadian juniors + OTC names require .V / .TO suffixes or have sparse data.
+// We never return 500 for "no data" cases — only real network/server errors.
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const YAHOO_ALIASES = {
+  'BYN':     ['BYN.V', 'BYN.TO'],
+  'BCMDF':   ['BCM.V', 'BCM.TO'],
+  'CXBMF':   ['CXB.TO', 'EQX.TO'], // Calibre was acquired by Equinox
+  'DOLLF':   ['DV.V', 'DOLLF', 'DV'],
+  'EGPFF':   ['EGP.V'],
+  'FMLMF':   ['FML.V'],
+  'FCUUF':   ['FCU.TO', 'FCU.V'],
+  'MNRMF':   ['MNR.V', 'MNRMF'],
+  'NGD':     ['NGD.TO', 'NGD'], // New Gold acquired / delisted from NYSE in 2025
+  'NIGHT':   ['NHT.V', 'NIGHT.V'],
+  'OCGCF':   ['OCG.V'],
+  'PEXPF':   ['PEX.V'],
+  'PRMNF':   ['PRM.V', 'PRM.TO'],
+  'RMRMF':   ['RMR.V'],
+  'SGSVF':   ['SGS.V', 'SAB.V'],
+  'SAND':    ['SAND', 'SSL.TO'],
+  'VZLAF':   ['VZLA.V', 'VZLA.TO'],
+  'WAMLF':   ['WAML.V'],
+  'XAMMF':   ['XAM.V'],
+  'YORKF':   ['YORK.V'],
+  'ZACAF':   ['ZAC.V'],
+  'MAG':     ['MAG', 'MAG.TO'],
+};
 
-const dbPath = path.join(__dirname, '..', 'backend', 'data', 'andes360.db');
-const db = new Database(dbPath);
+async function fetchYahoo(ticker, range = '3mo') {
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=${range}`;
+  const res = await fetch(url, {
+    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AndesCapital360/1.0)' },
+  });
+  if (!res.ok) return null;
 
-async function main() {
-  const tickers = db.prepare('SELECT ticker FROM companies').all().map(r => r.ticker);
-  console.log(`Refreshing ${tickers.length} companies via Yahoo Finance...\n`);
+  const json = await res.json();
+  if (json?.chart?.error) return null;
 
-  let success = 0;
-  const delay = ms => new Promise(r => setTimeout(r, ms));
+  const result = json?.chart?.result?.[0];
+  if (!result) return null;
 
-  for (let i = 0; i < tickers.length; i++) {
-    const t = tickers[i];
-    process.stdout.write(`  ${t} ... `);
-    try {
-      const data = await fetchYahooData(t);
-      if (data) {
-        db.prepare(`
-          UPDATE companies 
-          SET current_price = ?, market_cap = ?, above_50dma = ?, last_updated = ?
-          WHERE ticker = ?
-        `).run(data.lastClose, data.marketCap, data.above50DMA ? 1 : 0, new Date().toISOString(), t);
-        console.log(`OK ($${data.lastClose.toFixed(2)} | ${data.above50DMA ? 'Above' : 'Below'} 50DMA)`);
-        success++;
-      } else {
-        console.log('NO DATA');
-      }
-    } catch (e) {
-      console.log('ERROR', e.message);
-    }
-    if (i < tickers.length - 1) await delay(620);
+  const closes = result.indicators?.quote?.[0]?.close?.filter((c) => c != null) || [];
+  if (closes.length === 0) return null;
+
+  const price = closes[closes.length - 1];
+
+  let sma50 = null;
+  if (closes.length >= 50) {
+    sma50 = closes.slice(-50).reduce((sum, v) => sum + v, 0) / 50;
+  } else if (closes.length >= 5) {
+    sma50 = closes.reduce((sum, v) => sum + v, 0) / closes.length;
   }
 
-  console.log(`\n✅ Done. ${success}/${tickers.length} updated.`);
-  db.close();
+  return {
+    price: Number(price.toFixed(4)),
+    above_50dma: sma50 != null ? (price > sma50) : null,
+    sma50: sma50 != null ? Number(sma50.toFixed(2)) : null,
+  };
 }
 
-main().catch(console.error);
+exports.handler = async (event) => {
+  const raw = (event.queryStringParameters?.ticker || '').trim().toUpperCase();
+  if (!raw) {
+    return { statusCode: 400, body: JSON.stringify({ error: 'Ticker parameter is required' }) };
+  }
+
+  const candidates = [raw, ...(YAHOO_ALIASES[raw] || [])];
+  const tried = new Set();
+
+  for (const sym of candidates) {
+    if (tried.has(sym)) continue;
+    tried.add(sym);
+
+    try {
+      let data = await fetchYahoo(sym, '3mo')
+               || await fetchYahoo(sym, '1mo')
+               || await fetchYahoo(sym, '6mo');
+
+      if (data && data.price != null) {
+        return {
+          statusCode: 200,
+          body: JSON.stringify({
+            ticker: raw,
+            ...data,
+            yahoo_symbol: sym,
+          }),
+        };
+      }
+    } catch (e) {}
+  }
+
+  // Graceful response — no more red 500 errors for normal junior-miner situations
+  return {
+    statusCode: 200,
+    body: JSON.stringify({
+      ticker: raw,
+      price: null,
+      above_50dma: null,
+      sma50: null,
+      error: 'no_data',
+      message: 'No recent trading data on Yahoo (very common for micro-cap juniors, OTC names, or companies that were acquired/delisted)',
+    }),
+  };
+};

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto • Andes Capital 360</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', system_ui, sans-serif; }
+        .font-display { font-family: 'Space Grotesk', 'Inter', sans-serif; font-weight: 600; }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-200">
+    <nav class="border-b border-zinc-800 bg-zinc-950/95 backdrop-blur-lg sticky top-0 z-50">
+        <div class="max-w-screen-2xl mx-auto px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-x-3">
+                <a href="index.html" class="flex items-center gap-x-3">
+                    <span class="font-display text-2xl font-semibold tracking-tighter">Andes Capital</span>
+                    <span class="font-display text-2xl font-semibold tracking-tighter text-amber-400">360</span>
+                </a>
+            </div>
+            <a href="index.html" class="text-sm text-zinc-400 hover:text-white">← Back to Home</a>
+        </div>
+    </nav>
+
+    <div class="max-w-screen-2xl mx-auto px-6 pt-10 pb-8">
+        <h1 class="text-5xl font-display font-semibold tracking-tighter">Crypto</h1>
+        <p class="text-zinc-400 mt-2">Digital assets with asymmetric potential</p>
+        
+        <button onclick="refreshPrices()" 
+                class="mt-6 px-5 py-2.5 border border-zinc-700 rounded-2xl hover:bg-zinc-900 flex items-center gap-x-2 text-sm">
+            <i class="fa-solid fa-sync fa-sm"></i> 
+            <span id="refresh-btn-text">Refresh Prices</span>
+        </button>
+    </div>
+
+    <div class="max-w-screen-2xl mx-auto px-6 pb-12">
+        <div class="bg-zinc-900 border border-zinc-800 rounded-3xl overflow-hidden">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-xs text-zinc-400 font-semibold border-b border-zinc-700">
+                        <th class="text-left py-3 pl-6">TICKER</th>
+                        <th class="text-left py-3">NAME</th>
+                        <th class="text-right py-3 pr-6">PRICE</th>
+                        <th class="text-right py-3 pr-6">MARKET CAP</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body" class="divide-y divide-zinc-800"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const cryptos = [
+            { ticker: 'BTC', name: 'Bitcoin' },
+            { ticker: 'ETH', name: 'Ethereum' },
+            { ticker: 'FARTCOIN', name: 'Fartcoin' },
+            { ticker: 'SOL', name: 'Solana' },
+            { ticker: 'USELESS', name: 'Useless' }
+        ];
+
+        let data = [...cryptos];
+
+        function formatMarketCap(value) {
+            if (!value) return '—';
+            if (value >= 1e12) return '$' + (value / 1e12).toFixed(2) + 'T';
+            if (value >= 1e9) return '$' + (value / 1e9).toFixed(1) + 'B';
+            return '$' + (value / 1e6).toFixed(0) + 'M';
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+
+            data.forEach(item => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-zinc-800/50';
+                row.innerHTML = `
+                    <td class="pl-6 py-3 font-mono text-amber-400 font-semibold">${item.ticker}</td>
+                    <td class="py-3">${item.name}</td>
+                    <td class="text-right pr-6 tabular-nums font-medium">$${item.price ? item.price.toFixed(2) : '—'}</td>
+                    <td class="text-right pr-6 tabular-nums font-medium">${formatMarketCap(item.market_cap)}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        async function refreshPrices() {
+            const btnText = document.getElementById('refresh-btn-text');
+            const original = btnText.textContent;
+            btnText.textContent = 'Refreshing...';
+
+            for (let item of data) {
+                try {
+                    const res = await fetch(`/.netlify/functions/refresh-prices?ticker=${item.ticker}`);
+                    if (res.ok) {
+                        const d = await res.json();
+                        if (d.price) {
+                            item.price = d.price;
+                            if (d.market_cap) item.market_cap = d.market_cap;
+                        }
+                    }
+                } catch (e) {}
+                await new Promise(r => setTimeout(r, 180));
+            }
+
+            renderTable();
+            btnText.textContent = 'Done';
+            setTimeout(() => btnText.textContent = original, 1800);
+        }
+
+        // Initial demo values
+        data.forEach((c, i) => {
+            c.price = [67200, 2450, 0.78, 138, 0.0032][i];
+            c.market_cap = [1.33e12, 295e9, 780e6, 64e9, 3.2e6][i];
+        });
+
+        renderTable();
+    </script>
+</body>
+</html>

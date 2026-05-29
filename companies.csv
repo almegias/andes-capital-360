@@ -1,0 +1,97 @@
+name,ticker,type,category,risk,jurisdiction,overall_score,market_cap,above_50dma,current_price,comment,pros,cons
+AbraSilver Resource,ABBRF,Silver,Developer,High,Argentina,62,185000000,true,0.95,Diabillos silver-gold project in Argentina.,Large resource improving jurisdiction,Argentina political risk
+Aftermath Silver,AAGFF,Silver,Developer,High,Peru,56,72000000,true,0.28,Berenguela silver-copper-manganese project.,Andes location polymetallic,Peru jurisdiction risk
+Alamos Gold,AGI,Gold,Producer,Medium,"Canada / Mexico",74,1850000000,true,14.2,Mid-tier gold producer with strong growth.,Diversified good margins dividend,Moderate scale
+Andean Precious Metals,ANPMF,Silver,Producer,High,Bolivia,71,741000000,true,1.48,Bolivia silver-gold producer with rapid growth.,Pure-play Andes silver production ramp,Bolivia political risk
+Apollo Silver,APGOF,Silver,Developer,High,Mexico,64,148000000,true,0.31,High-grade silver project in Mexico.,High-grade large resource clean balance sheet,Early development permitting timeline
+Argentum Silver,AGMRF,Silver,Explorer,High,"Canada - Ontario",49,38000000,true,0.12,Cobalt silver district with historic production.,Ontario high-grade cobalt by-product optionality,Very early no current resource
+Arizona Sonoran Copper,ASCUF,Copper,Developer,High,"USA - Arizona",67,320000000,true,1.45,Cactus project - brownfield copper with strong economics.,Arizona jurisdiction brownfield strong economics,Still pre-production financing ahead
+Ascot Resources,AOTVF,Gold,Developer,High,"Canada - BC",58,185000000,true,0.42,Premier gold project in BC with high-grade underground potential.,High-grade BC jurisdiction,Development stage
+Avino Silver & Gold,ASM,Silver,Producer,High,Mexico,55,185000000,true,1.25,Avino mine in Mexico. Small but consistent silver-gold producer.,Producing exploration upside low valuation,Mexico risk small scale
+Aya Gold & Silver,AYASF,Silver,Producer,High,Morocco,65,920000000,true,8.45,Zgounder high-grade silver mine in Morocco.,High-grade low-cost excellent management,North Africa jurisdiction
+Banyan Gold,BYN,Gold,Explorer,High,"Canada - Yukon",52,85000000,true,0.28,AurMac gold project in Yukon with large near-surface resource.,Large tonnage Yukon,Early stage
+Bear Creek Mining,BCMDF,Silver,Developer,High,Peru,57,145000000,true,0.38,Corani silver project in Peru.,Large scale good metallurgy,Permitting delays
+Cascadia Minerals,CMILF,Copper,Explorer,High,"Canada - Yukon",54,48000000,true,0.22,Catch copper-gold porphyry project.,Yukon new discovery potential,Early exploration
+Cassiar Gold,CGLD,Gold,Explorer,High,"Canada - BC",50,42000000,true,0.18,Cassiar gold project with historic production.,Past production BC,Exploration risk
+Coeur Mining,CDE,Silver,Producer,Medium,"USA / Mexico",66,1650000000,true,6.2,US silver-gold producer with Rochester Palmarejo Kensington.,USA + Mexico mix silver leverage,Mixed cost profile historically
+Dolly Varden Silver,DOLLF,Silver,Developer,High,"Canada - BC",61,165000000,true,0.85,Dolly Varden + Homestake Ridge high-grade silver-gold.,BC Canada high-grade veins,Development stage
+Dundee Precious Metals,DPMLF,Gold,Producer,Medium,"Bulgaria / Namibia / Ecuador",65,980000000,true,8.5,Gold producer with operations in Europe and Africa.,Low costs strong cash generation,Bulgaria/Ecuador risk
+Eagle Plains Resources,EGPFF,Gold,Explorer,High,Canada,48,28000000,true,0.12,Multiple early-stage gold and critical mineral projects.,Diversified projects low overhead,Very early stage
+Endeavour Silver,EXK,Silver,Producer,High,Mexico,59,980000000,false,4.85,Mexican silver producer with Terronera development.,Production growth via Terronera,Mexico jurisdiction risk
+Energy Fuels,UUUU,Uranium,Producer,High,USA,65,1450000000,true,6.85,Leading US uranium producer with rare earths and vanadium.,USA strategic asset diversified,Uranium price recovery dependent
+Ero Copper,ERO,Copper,Producer,Medium,Brazil,67,1580000000,true,16.4,High-grade copper-gold producer in Brazil.,Low costs high margins,Brazil exposure
+Equity Metals,EQMEF,Silver,Explorer,High,"Canada - BC",50,52000000,true,0.15,Silver Queen high-grade project.,High grades past production history,Exploration stage
+Faraday Copper,CPPKF,Copper,Developer,High,"USA - Arizona",63,285000000,true,0.95,Copper Creek project in Arizona. Large resource.,USA copper large resource strong team,Long development timeline large capex required
+Finlay Minerals,FMLMF,Copper,Explorer,High,"Canada - BC",50,32000000,true,0.09,Silver Hope copper-gold project.,BC copper focus low valuation,Exploration risk
+Fireweed Metals,FWEDF,Critical Minerals,Developer,High,"Canada - Yukon",60,185000000,true,0.72,Macmillan Pass zinc-lead-silver project.,Large resource Yukon,Remote location
+Fission Uranium,FCUUF,Uranium,Developer,High,"Canada - Saskatchewan",68,680000000,true,0.95,Patterson Lake South high-grade uranium project.,World-class grade safe jurisdiction,Pre-production
+Galiano Gold,GAU,Gold,Producer,Medium,Ghana,65,680000000,true,1.65,Asanko Gold Mine in Ghana (JV with Gold Fields).,Low cost strong JV partner,Africa jurisdiction risk
+Golden Arrow Resources,GARWF,Silver,Explorer,High,Argentina,52,38000000,true,0.08,Chinchillas silver project with royalty component.,Royalty income + exploration,Argentina risk
+Golden Minerals,AUMN,Gold,Producer,High,Mexico,46,45000000,false,0.18,Velardeña and Rodeo projects in Mexico.,Ultra-low market cap dual project optionality,Very small scale Mexico risk
+Goliath Resources,GOTRF,Gold,Explorer,High,"Canada - BC",52,85000000,true,0.65,Golddigger project with high-grade discoveries.,High grades recent drilling success,Exploration stage
+Guanajuato Silver,GSVRF,Silver,Producer,High,Mexico,53,185000000,true,0.28,Reviving historic silver districts in Mexico.,Low capex restarts district consolidation,Small scale execution risk
+Highland Gold,HGM,Gold,Producer,High,"Russia / Kyrgyzstan",48,680000000,false,4.2,Gold producer with assets in Russia and Central Asia.,Low costs production growth,Russia risk (sanctions)
+Impact Silver,ISVLF,Silver,Producer,High,Mexico,54,95000000,true,0.22,Zacualpan silver district producer.,Producing district scale,Mexico risk small production
+Independence Gold,IEGCF,Gold,Explorer,High,"Canada - BC",47,25000000,true,0.11,3Ts gold project with historic production.,BC past production,Small resource
+Jaguar Mining,JAGGF,Gold,Producer,High,Brazil,56,185000000,true,2.85,Gold producer with operations in Brazil Iron Quadrangle.,Brazil gold cash flow positive,Brazil risk
+Juggernaut Exploration,JUGRF,Gold,Explorer,High,"Canada - BC",47,22000000,true,0.18,Midas gold project with recent high-grade showings.,High-grade showings,Very early
+K92 Mining,KNTNF,Gold,Producer,High,"Papua New Guinea",62,680000000,true,5.4,High-grade gold producer in Papua New Guinea.,High grades strong growth,PNG jurisdiction
+Kodiak Copper,KDKCF,Copper,Explorer,High,"Canada - BC",59,72000000,true,0.48,MPD copper-gold porphyry project.,BC copper large target,Exploration risk
+Liberty Gold,LGDTF,Gold,Developer,Medium,"USA - Idaho",69,285000000,true,0.42,Black Pine oxide gold project in Idaho.,USA jurisdiction large oxide resource,Development stage
+MAG Silver,MAG,Silver,Producer,Medium,Mexico,70,1390000000,true,13.8,50% owner of world-class Juanicipio mine with Fresnillo.,Tier-1 asset strong partner,Mexico mining law uncertainty
+McEwen Mining,MUX,Gold,Producer,High,"USA / Argentina / Mexico",58,820000000,true,9.85,Gold & silver producer with assets across the Americas.,Diversified jurisdictions exploration upside,High volatility mixed history
+Minaurum Gold,MNRMF,Gold,Explorer,High,Mexico,53,72000000,true,0.28,Alamos project with multiple targets.,Large land package,Early stage
+Nighthawk Gold,NIGHT,Gold,Explorer,High,"Canada - Northwest Territories",49,35000000,true,0.22,Colomac gold project in the Northwest Territories.,Large resource Canada,Remote location
+Orezone Gold,ORZCF,Gold,Producer,High,"Burkina Faso",59,420000000,true,1.15,Bomboré gold mine in Burkina Faso.,Low capex large resource good jurisdiction in WA,Burkina security concerns
+Osisko Development,ODV,Gold,Developer,High,"Canada / USA / Mexico",57,185000000,true,3.8,Gold developer with assets in Canada USA and Mexico.,Diversified pipeline,Development risk
+Outcrop Silver,OCGCF,Silver,Explorer,High,Colombia,57,92000000,true,0.19,Santa Ana high-grade silver-gold project.,Very high grades Colombia improving,Early stage Colombia risk
+Pacific Ridge Exploration,PEXPF,Copper,Explorer,High,"Canada - BC",52,42000000,true,0.15,Kliyul copper-gold porphyry.,BC copper-gold focus,Exploration risk
+Perseverance Metals,PMET,Gold,Explorer,High,"Canada - Quebec",51,42000000,true,0.28,Quebec gold exploration with multiple projects.,Quebec jurisdiction good land package,Early stage
+Prime Mining,PRMNF,Gold,Developer,High,Mexico,64,165000000,true,1.25,Los Reyes high-grade gold-silver project.,High grades strong economics,Mexico risk
+QMX Gold,QMX,Gold,Explorer,High,"Canada - Quebec",50,28000000,true,0.15,Val dOr gold district explorer.,Quebec infrastructure,Exploration risk
+Revival Gold,RVLGF,Gold,Developer,High,"USA - Idaho",62,145000000,true,0.42,Beartrack-Arnett gold project in Idaho.,Safe jurisdiction large resource,Development stage permitting
+Rio2 Limited,RIOFF,Gold,Developer,High,Peru,66,348000000,true,0.52,Advancing the Fenix gold project in Peru.,Permits secured excellent AISC,Development stage needs financing
+Rokmaster Resources,RMRMF,Gold,Explorer,High,"Canada - BC",49,28000000,true,0.09,Revel Ridge gold project with large resource.,Large resource BC infrastructure,Development risk
+Rupert Resources,RUP,Gold,Explorer,High,Finland,59,185000000,true,4.2,Ikkari gold discovery in Finland Lapland.,High-grade discovery Finland,Early development
+Sabina Gold & Silver,SGSVF,Gold,Developer,High,"Canada - Nunavut",55,420000000,true,1.85,Back River gold project in Nunavut.,High-grade large resource,Arctic location permitting
+Silver One Resources,SLVRF,Silver,Developer,High,"USA - Nevada",60,95000000,true,0.28,Candelaria past-producing silver mine restart.,Nevada jurisdiction past production,Restart risk
+Silver Sands of Peru,SSPDF,Silver,Explorer,High,Peru,55,65000000,true,0.42,Silver Sands historic high-grade project.,Peru silver belt past production,Peru risk early restart
+Silvercorp Metals,SVM,Silver,Producer,Medium,"China / Ecuador",60,680000000,true,3.25,High-grade silver-lead-zinc producer.,Low costs strong balance sheet dividend payer,China jurisdiction
+Southern Silver Exploration,SSVFF,Silver,Developer,High,Mexico,55,95000000,true,0.18,Cerro Las Minitas large polymetallic resource.,Large resource good metallurgy,Mexico large capex required for development
+Sun Summit Minerals,SMREF,Gold,Explorer,High,"Canada - BC",51,68000000,true,0.22,Buck gold-silver project.,Safe BC jurisdiction,Early exploration
+Taseko Mines,TGB,Copper,Producer,Medium,"Canada / USA",68,920000000,true,2.85,Gibraltar mine + Florence copper project in Arizona.,Florence is low-capex USA jurisdiction,Permitting and copper price beta
+Tinka Resources,TKRFF,Zinc,Developer,High,Peru,54,65000000,true,0.18,Ayawilca zinc-silver project in Peru.,Large resource Peru zinc,Zinc price Peru risk
+Ucore Rare Metals,UURAF,Critical Minerals,Developer,High,"USA - Alaska",57,145000000,true,0.85,Bokan Mountain rare earths + RapidSX tech.,USA critical minerals tech edge,Early stage
+UEX Corporation,UEX,Uranium,Explorer,High,"Canada - Saskatchewan",52,85000000,true,0.32,Uranium exploration in the Athabasca Basin.,Saskatchewan uranium good projects,Uranium sector risk
+Uranium Energy Corp,UEC,Uranium,Producer,High,USA,63,1280000000,true,5.45,US-focused uranium developer/producer.,Large resource base ISR potential,Development risk
+Viscount Mining,VML,Gold,Explorer,High,"USA / Canada",48,22000000,true,0.12,Multiple gold and silver projects in the USA and Canada.,Diversified low valuation,Early stage
+Wallbridge Mining,WM,Gold,Explorer,High,"Canada - Ontario",53,68000000,true,0.25,Fenelon gold project in Quebec/Ontario border area.,Quebec/Ontario good grades,Exploration risk
+Western Alaska Minerals,WAMLF,Copper,Explorer,High,"USA - Alaska",53,68000000,true,0.55,Illinois Creek copper-gold-silver project.,Alaska past production history,Remote
+Xanadu Mines,XAMMF,Copper,Developer,High,Mongolia,51,95000000,false,0.32,Kharmagtai copper-gold porphyry project.,Large tonnage strong partner (Zijin),Mongolia jurisdiction
+York Harbour Metals,YORKF,Copper,Explorer,High,"Canada - Newfoundland",48,35000000,true,0.15,High-grade massive sulphide project.,Newfoundland high grades,Very early
+Zacatecas Silver,ZACAF,Silver,Explorer,High,Mexico,50,42000000,true,0.18,Zacatecas silver district with multiple targets.,Mexico silver belt multiple projects,Mexico risk early stage
+B2Gold,BTG,Gold,Producer,Medium,"Mali / Namibia / Philippines",68,1420000000,true,2.85,Low-cost gold producer with operations in Africa and Asia.,Low AISC strong cash flow,Africa jurisdiction risk
+Barrick Gold,GOLD,Gold,Producer,Low,"USA / Canada / Africa / Latin America",72,1850000000,true,18.2,One of the worlds largest gold producers with premium assets.,Tier-1 assets excellent management,Some high-risk jurisdictions
+Eldorado Gold,EGO,Gold,Producer,Medium,"Canada / Greece / Turkey",65,1680000000,true,15.8,Gold producer with assets in Canada Greece and Turkey.,Diversified jurisdictions growth projects,Turkey/Greece risk
+Endeavour Mining,EDV,Gold,Producer,Medium,West Africa,66,1420000000,true,22.4,West African gold producer with multiple mines.,Low costs strong management,Africa security and political risk
+Equinox Gold,EQX,Gold,Producer,High,"Brazil / USA / Canada / Mexico",60,1420000000,true,5.2,Gold producer with multiple mines in the Americas.,Scale in Americas growth pipeline,Brazil risk
+First Majestic Silver,AG,Silver,Producer,High,Mexico,58,980000000,false,6.8,Pure-play Mexican silver producer.,High leverage to silver Mexico focus,Mexico risk volatile
+Freegold Ventures,FGOVF,Gold,Explorer,High,"Canada - Yukon / Alaska",53,68000000,true,0.35,Golden Summit project in Alaska with large resource.,Alaska jurisdiction large resource,Development stage
+G Mining Ventures,GMINF,Gold,Producer,Medium,"Brazil / Guyana",64,920000000,true,6.8,New gold producer with Tocantinzinho mine in Brazil.,Low-cost production clean balance sheet,Brazil execution risk
+Gold Fields,GFI,Gold,Producer,Medium,"South Africa / Ghana / Australia / Chile",64,1850000000,true,14.8,Major gold producer with global footprint.,Scale diversified,South Africa risk
+IAMGOLD,IAG,Gold,Producer,High,"Canada / Burkina Faso / Suriname",59,920000000,true,3.45,Mid-tier gold producer focused on Africa and South America.,Production growth exploration upside,Africa risk higher costs
+Kinross Gold,KGC,Gold,Producer,Medium,"USA / Brazil / Mauritania",67,810000000,true,5.2,Global gold producer with focus on Americas and Africa.,Scale US assets,Africa exposure
+Lundin Gold,LUGDF,Gold,Producer,Medium,Ecuador,70,1850000000,true,12.8,Owner of Fruta del Norte one of the highest-grade gold mines globally.,World-class asset exceptional margins,Ecuador political perception
+Mandalay Resources,MND,Gold,Producer,High,"Australia / Canada / Sweden",58,420000000,true,2.1,Gold and antimony producer with assets in Australia and Canada.,Diversified cash generative,Small scale
+Newmont,NEM,Gold,Producer,Low,"USA / Canada / Australia / Ghana / Peru",74,1850000000,true,42.8,Worlds largest gold producer by market cap and production.,Scale diversification strong ESG,Integration risks from acquisitions
+OceanaGold,OGC,Gold,Producer,High,"New Zealand / Philippines / USA",61,680000000,true,2.1,Gold producer with operations in the Pacific and Americas.,Diversified good jurisdictions,Philippines risk
+Osisko Gold Royalties,OR,Diversified,Royalty,Low,Various,72,1850000000,true,17.8,High-quality gold royalty company with Canadian focus.,Premium assets low risk excellent management,Premium valuation
+Pan American Silver,PAAS,Silver,Producer,Medium,"Mexico / Peru / Canada",69,920000000,true,18.5,Leading silver producer with significant gold by-product.,Scale in silver Latin America focus,Mexico/Peru risk
+Perseus Mining,PRU,Gold,Producer,Medium,West Africa,64,1750000000,true,1.85,West African gold producer with multiple mines.,Low costs multiple assets,Africa political risk
+Resolute Mining,RMLRF,Gold,Producer,High,"Mali / Senegal / Ghana",48,680000000,false,0.42,African gold producer (Mali Senegal Ghana).,Low AISC large resource,Mali risk past operational issues
+Sandstorm Gold,SAND,Diversified,Royalty,Medium,Various,72,1720000000,true,5.65,Diversified royalty/streaming portfolio.,Asset-light growing portfolio strong deal flow,Lower leverage to metal prices than producers
+Teck Resources,TECK,Copper,Producer,Medium,"Canada / Chile",68,18000000000,true,42,Teck Resources diversified with significant copper growth (Quebrada Blanca Chile).,Large copper expansion in Andes strong balance sheet,Coal exposure creates ESG headwinds
+Torex Gold,TORXF,Gold,Producer,Medium,Mexico,68,1850000000,true,18.5,Morelos Gold Complex - high-grade underground + open pit.,Strong margins Mexico but good operator growth,Mexico risk single jurisdiction
+Vizsla Silver,VZLAF,Silver,Developer,High,Mexico,68,285000000,true,1.12,Panuco high-grade silver vein district with district-scale potential.,Exceptional grades near-surface strong metallurgy,Exploration risk resource stage
+West African Resources,WFRSF,Gold,Producer,High,"Burkina Faso",59,920000000,true,0.68,Sanbrado low-cost gold mine.,Low costs expansion potential strong team,Burkina Faso security risk
+Zijin Mining (small cap view),ZIJMF,Copper,Producer,Medium,"China / Global",65,1850000000,true,2.85,Major copper-gold producer with global assets.,Scale low costs aggressive growth,China exposure governance concerns

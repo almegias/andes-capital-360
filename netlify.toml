@@ -5,7 +5,13 @@
 [functions]
   directory = "netlify/functions"
 
-# Redirect all routes to index.html (SPA behavior)
+# Reduce aggressive caching so Refresh button and updates appear quickly
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# SPA redirect (functions are automatically excluded by Netlify)
 [[redirects]]
   from = "/*"
   to = "/index.html"
