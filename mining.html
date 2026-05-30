@@ -2611,7 +2611,7 @@ volatile. Always do your own due diligence.
                 console.warn("Auto-fetch for new company failed, using defaults");
             }
 
-            // Extra reliable market cap fetch for the Add flow
+            // Extra reliable market cap fetch for the Add flow (direct quote)
             if (!payload.market_cap) {
                 try {
                     const quoteRes = await fetch(`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${ticker}`);
@@ -2624,6 +2624,17 @@ volatile. Always do your own due diligence.
                     }
                 } catch (e) {}
             }
+        } else if (nameGuess) {
+            // Last resort: try treating the raw name as ticker for very small caps
+            try {
+                const res = await fetch(`/.netlify/functions/refresh-prices?ticker=${rawValue.toUpperCase().replace(/[^A-Z]/g,'').slice(0,6)}`);
+                if (res.ok) {
+                    const d = await res.json();
+                    if (d.price != null) payload.current_price = d.price;
+                    if (d.market_cap != null) payload.market_cap = d.market_cap;
+                    if (d.above_50dma !== undefined) payload.above_50dma = d.above_50dma;
+                }
+            } catch (e) {}
         }
 
         // Duplicate check

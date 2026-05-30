@@ -122,7 +122,14 @@ exports.handler = async (event) => {
                || await fetchYahoo(sym, '6mo');
 
       if (data && data.price != null) {
+        // Prioritize market cap: try quote first for accuracy
+        let marketCap = await fetchMarketCap(sym);
+        
         const info = await fetchCompanyInfo(sym);
+        if (!marketCap && info?.marketCap) {
+          marketCap = info.marketCap;
+        }
+
         const shortDescription = info?.longBusinessSummary 
           ? info.longBusinessSummary.substring(0, 280) + '...' 
           : null;
@@ -132,7 +139,7 @@ exports.handler = async (event) => {
           body: JSON.stringify({
             ticker: raw,
             ...data,
-            market_cap: info?.marketCap || null,
+            market_cap: marketCap,
             name: info?.shortName || data.name || null,
             description: shortDescription,
             yahoo_symbol: sym,
