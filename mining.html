@@ -2610,6 +2610,20 @@ volatile. Always do your own due diligence.
             } catch (e) {
                 console.warn("Auto-fetch for new company failed, using defaults");
             }
+
+            // Extra reliable market cap fetch for the Add flow
+            if (!payload.market_cap) {
+                try {
+                    const quoteRes = await fetch(`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${ticker}`);
+                    if (quoteRes.ok) {
+                        const q = await quoteRes.json();
+                        const quote = q?.quoteResponse?.result?.[0];
+                        if (quote?.marketCap) {
+                            payload.market_cap = quote.marketCap;
+                        }
+                    }
+                } catch (e) {}
+            }
         }
 
         // Duplicate check
@@ -2732,7 +2746,8 @@ volatile. Always do your own due diligence.
                             .from('companies')
                             .update({
                                 current_price: data.price,
-                                above_50dma: data.above_50dma
+                                above_50dma: data.above_50dma,
+                                market_cap: data.market_cap || null
                             })
                             .eq('ticker', company.ticker)
                             .then(({ error }) => {

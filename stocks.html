@@ -267,14 +267,16 @@
                         const d = await res.json();
                         if (d.price != null) {
                             item.price = d.price;
-                            if (d.market_cap != null) item.market_cap = d.market_cap;
                             if (d.above_50dma !== undefined) item.above_50dma = d.above_50dma;
                             item.comment = "(detailed thesis for premium users.)";
                             successCount++;
                         }
+                        if (d.market_cap != null) {
+                            item.market_cap = d.market_cap;
+                        }
                     }
 
-                    // Always try to get fresh market cap from Yahoo quote (more reliable for this)
+                    // Aggressive fallback: always try direct Yahoo quote for market cap
                     try {
                         const quoteRes = await fetch(`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${item.ticker}`);
                         if (quoteRes.ok) {
