@@ -109,7 +109,6 @@
                         <th class="text-left py-3">TICKER</th>
                         <th class="text-left py-3">NAME</th>
                         <th class="text-right py-3 pr-6">PRICE</th>
-                        <th class="text-right py-3 pr-6">MARKET CAP</th>
                         <th class="text-right py-3 pr-6">SCORE</th>
                         <th class="text-left py-3 pl-2">COMMENT</th>
                     </tr>
@@ -163,7 +162,6 @@
                     <td class="font-mono text-amber-400 font-semibold">${item.ticker}</td>
                     <td class="py-3">${item.name}</td>
                     <td class="text-right pr-6 tabular-nums font-medium">$${item.price ? item.price.toFixed(2) : '—'}</td>
-                    <td class="text-right pr-6 tabular-nums font-medium">${formatMarketCap(item.market_cap)}</td>
                     <td class="text-right pr-6 tabular-nums font-medium"><span class="text-[10px] text-amber-400">Premium</span></td>
                     <td class="py-3 text-xs text-zinc-400">${item.comment || ''}</td>
                     <td class="py-3 pr-4 text-right">
