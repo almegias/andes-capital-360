@@ -2749,17 +2749,23 @@ volatile. Always do your own due diligence.
                     if (data.price != null && typeof data.price === 'number') {
                         company.current_price = data.price;
                         company.above_50dma = data.above_50dma;
+                        if (data.market_cap != null) {
+                            company.market_cap = data.market_cap;
+                        }
                         updatedCount++;
 
-                        // Persist the fresh price to Supabase so all visitors see the latest values
-                        // (this is an admin/maintenance action performed by the site owner)
+                        // Persist to Supabase
+                        const updatePayload = {
+                            current_price: data.price,
+                            above_50dma: data.above_50dma
+                        };
+                        if (data.market_cap != null) {
+                            updatePayload.market_cap = data.market_cap;
+                        }
+
                         supabaseClient
                             .from('companies')
-                            .update({
-                                current_price: data.price,
-                                above_50dma: data.above_50dma,
-                                market_cap: data.market_cap || null
-                            })
+                            .update(updatePayload)
                             .eq('ticker', company.ticker)
                             .then(({ error }) => {
                                 if (error) {
@@ -2767,6 +2773,22 @@ volatile. Always do your own due diligence.
                                 }
                             });
                     } else {
+                        // Last resort: try to get at least market cap for this ticker
+                        try {
+                            const quoteRes = await fetch(`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${company.ticker}`);
+                            if (quoteRes.ok) {
+                                const q = await quoteRes.json();
+                                const quote = q?.quoteResponse?.result?.[0];
+                                if (quote?.marketCap) {
+                                    company.market_cap = quote.marketCap;
+                                    await supabaseClient
+                                        .from('companies')
+                                        .update({ market_cap: quote.marketCap })
+                                        .eq('ticker', company.ticker);
+                                }
+                            }
+                        } catch (e) {}
+                    }
                         noDataCount++;
                         if (data.error === 'no_data') {
                             console.info(`[price] ${company.ticker}: no recent Yahoo data (using cached value)`);

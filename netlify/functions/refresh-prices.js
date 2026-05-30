@@ -74,7 +74,16 @@ async function fetchMarketCap(ticker) {
 
     const json = await res.json();
     const quote = json?.quoteResponse?.result?.[0];
-    return quote?.marketCap ?? null;
+    if (!quote) return null;
+
+    let marketCap = quote.marketCap ?? null;
+
+    // Fallback calculation if marketCap is missing but we have shares and price
+    if (!marketCap && quote.sharesOutstanding && quote.regularMarketPrice) {
+      marketCap = Math.round(quote.sharesOutstanding * quote.regularMarketPrice);
+    }
+
+    return marketCap;
   } catch (e) {
     return null;
   }
@@ -122,12 +131,29 @@ exports.handler = async (event) => {
                || await fetchYahoo(sym, '6mo');
 
       if (data && data.price != null) {
-        // Prioritize market cap: try quote first for accuracy
+        // Get the best possible market cap
         let marketCap = await fetchMarketCap(sym);
-        
+
         const info = await fetchCompanyInfo(sym);
         if (!marketCap && info?.marketCap) {
           marketCap = info.marketCap;
+        }
+
+        // Final fallback using sharesOutstanding from the quote
+        if (!marketCap && info) {
+          // Re-fetch quote to get shares if needed
+          try {
+            const quoteRes = await fetch(`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${sym}`, {
+              headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AndesCapital360/1.0)' }
+            });
+            if (quoteRes.ok) {
+              const qjson = await quoteRes.json();
+              const q = qjson?.quoteResponse?.result?.[0];
+              if (q?.sharesOutstanding && q?.regularMarketPrice) {
+                marketCap = Math.round(q.sharesOutstanding * q.regularMarketPrice);
+              }
+            }
+          } catch (e) {}
         }
 
         const shortDescription = info?.longBusinessSummary 
