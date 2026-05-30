@@ -225,7 +225,7 @@
                         const info = json[cgId];
                         if (info.usd != null) item.price = info.usd;
                         if (info.usd_market_cap != null) item.market_cap = info.usd_market_cap;
-                        item.comment = `${item.name} is a cryptocurrency token tracked on CoinGecko. (detailed thesis for premium users.)`;
+                        item.comment = `${item.name} — see CoinGecko for market data and project details. (detailed thesis for premium users.)`;
                     }
                 });
 
@@ -359,17 +359,28 @@
             // Fetch price data
             if (resolvedId) {
                 try {
-                    const priceRes = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${resolvedId}&vs_currencies=usd&include_market_cap=true`);
-                    if (priceRes.ok) {
-                        const priceJson = await priceRes.json();
-                        if (priceJson[resolvedId]) {
-                            const info = priceJson[resolvedId];
-                            if (info.usd != null) newItem.price = info.usd;
-                            if (info.usd_market_cap != null) newItem.market_cap = info.usd_market_cap;
-                            newItem.comment = `${newItem.name} is a cryptocurrency token tracked on CoinGecko. (detailed thesis for premium users.)`;
+                    // Fetch both price and description in one call
+                    const coinRes = await fetch(`https://api.coingecko.com/api/v3/coins/${resolvedId}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false&sparkline=false`);
+                    if (coinRes.ok) {
+                        const coinData = await coinRes.json();
+                        if (coinData.market_data?.current_price?.usd) {
+                            newItem.price = coinData.market_data.current_price.usd;
+                        }
+                        if (coinData.market_data?.market_cap?.usd) {
+                            newItem.market_cap = coinData.market_data.market_cap.usd;
+                        }
+                        let desc = coinData.description?.en || '';
+                        if (desc) {
+                            // Take first sentence or ~180 chars
+                            desc = desc.split('.')[0].substring(0, 180);
+                            newItem.comment = `${desc}. (detailed thesis for premium users.)`;
+                        } else {
+                            newItem.comment = `${newItem.name} — see CoinGecko for market data and project details. (detailed thesis for premium users.)`;
                         }
                     }
-                } catch (e) {}
+                } catch (e) {
+                    newItem.comment = `${newItem.name} — see CoinGecko for market data and project details. (detailed thesis for premium users.)`;
+                }
             }
 
             data.push(newItem);

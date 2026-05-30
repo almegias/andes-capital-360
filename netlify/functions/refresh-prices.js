@@ -123,6 +123,10 @@ exports.handler = async (event) => {
 
       if (data && data.price != null) {
         const info = await fetchCompanyInfo(sym);
+        const shortDescription = info?.longBusinessSummary 
+          ? info.longBusinessSummary.substring(0, 280) + '...' 
+          : null;
+
         return {
           statusCode: 200,
           body: JSON.stringify({
@@ -130,7 +134,7 @@ exports.handler = async (event) => {
             ...data,
             market_cap: info?.marketCap || null,
             name: info?.shortName || data.name || null,
-            description: info?.longBusinessSummary || null,
+            description: shortDescription,
             yahoo_symbol: sym,
           }),
         };

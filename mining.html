@@ -2539,60 +2539,58 @@ volatile. Always do your own due diligence.
             return;
         }
 
-        // Basic heuristic: if it looks like a ticker (short, all caps or letters), treat as ticker
         const isLikelyTicker = rawValue.length <= 6 && /^[A-Za-z.]+$/.test(rawValue);
-        const ticker = isLikelyTicker ? rawValue.toUpperCase() : '';
+        const ticker = isLikelyTicker ? rawValue.toUpperCase() : rawValue.toUpperCase().slice(0, 8);
         const nameGuess = !isLikelyTicker ? rawValue : rawValue.toUpperCase();
 
-        // Default values
+        // Start with defaults
         let payload = {
             name: nameGuess,
-            ticker: ticker,
+            ticker: isLikelyTicker ? ticker : '',
             type: 'Gold',
             category: 'Explorer',
             risk: 'High',
             jurisdiction: 'Various',
             overall_score: 60,
-            comment: 'User requested addition. Detailed review pending.'
+            comment: 'User requested addition. Detailed review pending.',
+            current_price: null,
+            market_cap: null,
+            above_50dma: null
         };
 
-        // Try to fetch live price data
-        if (ticker) {
-            try {
-                const res = await fetch(`/.netlify/functions/refresh-prices?ticker=${ticker}`);
-                if (res.ok) {
-                    const priceData = await res.json();
-                    if (priceData.price != null) {
-                        payload.current_price = priceData.price;
-                        payload.above_50dma = priceData.above_50dma;
-                    }
-                    if (priceData.market_cap) {
-                        payload.market_cap = priceData.market_cap;
-                    }
-                }
-            } catch (e) {
-                console.warn("Could not fetch live price for new company");
-            }
-        }
+        // Try to fetch rich data from Yahoo via our function
+        try {
+            const res = await fetch(`/.netlify/functions/refresh-prices?ticker=${ticker}`);
+            if (res.ok) {
+                const d = await res.json();
 
-        // If we only have a name and no ticker, we can leave ticker blank or ask user later.
-        // For now we allow it.
+                if (d.name) payload.name = d.name;
+                if (d.price != null) payload.current_price = d.price;
+                if (d.market_cap != null) payload.market_cap = d.market_cap;
+                if (d.above_50dma !== undefined) payload.above_50dma = d.above_50dma;
+                if (d.description) {
+                    payload.comment = d.description.substring(0, 220) + '... (detailed thesis for premium users.)';
+                }
+            }
+        } catch (e) {
+            console.warn("Auto-fetch for new company failed, using defaults");
+        }
 
         try {
             const { data: inserted, error } = await supabaseClient.from('companies').insert([payload]).select().single();
             if (error) throw error;
 
-            // Optimistically add to local list so it appears immediately
+            // Optimistically add to local list
             const newCompany = { ...payload, id: inserted?.id || Date.now() };
             companies.push(newCompany);
             companies.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
-            alert('Company added! The site attempted to auto-fill price data. You can edit details later if needed.');
+            alert('Company added successfully with auto-populated data from Yahoo Finance!');
             hideAddModal();
-            renderTable(companies);  // immediate UI update
+            renderTable(companies);
 
-            // Sync with DB in background
-            setTimeout(() => loadCompaniesFromSupabase(), 500);
+            // Background sync
+            setTimeout(() => loadCompaniesFromSupabase(), 800);
         } catch (err) {
             alert('Error adding company: ' + err.message);
         }
