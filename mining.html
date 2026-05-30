@@ -193,15 +193,34 @@ volatile. Always do your own due diligence.
     </div>
 
     <script>
-        // Clean up any leftover static table content from page saves
-        setTimeout(() => {
-            const tbody = document.getElementById('table-body');
-            if (tbody) {
-                // Remove any direct child <tr> that were statically in the HTML
-                const staticRows = tbody.querySelectorAll(':scope > tr');
-                staticRows.forEach(row => row.remove());
+        // Aggressive cleanup of any static table garbage left from previous page saves
+        (function cleanupBrokenTable() {
+            const tableContainer = document.querySelector('#universe-section .bg-zinc-900');
+            if (tableContainer) {
+                // Remove everything after the proper table structure
+                const table = tableContainer.querySelector('table');
+                if (table) {
+                    const tbody = table.querySelector('tbody');
+                    if (tbody) {
+                        // Nuke all children
+                        tbody.innerHTML = '';
+                    }
+                }
             }
-        }, 50);
+
+            // Also remove any orphaned <tr> or <td> that leaked outside the table
+            document.querySelectorAll('tr.company-row, td').forEach(el => {
+                if (!el.closest('#table-body')) {
+                    el.remove();
+                }
+            });
+
+        // Force an early render once Supabase client is ready
+        setTimeout(() => {
+            if (typeof companies !== 'undefined' && companies.length > 0 && typeof renderTable === 'function') {
+                renderTable(companies);
+            }
+        }, 300);
     </script>
                 <td class="py-2.5 text-center"><span class="data-badge px-2 py-px rounded-2xl dma-above">Above</span></td>
                 <td class="py-2.5 pl-2 pr-1 text-xs text-zinc-400 max-w-[260px] line-clamp-2">
