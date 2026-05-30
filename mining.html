@@ -193,53 +193,42 @@ volatile. Always do your own due diligence.
     </div>
 
     <script>
-        // Nuclear option: completely nuke any static junk between the table and the real JS
-        (function nuclearCleanup() {
-            const universe = document.getElementById('universe-section');
-            if (universe) {
-                // Find the table container
-                const containers = universe.querySelectorAll('.bg-zinc-900');
-                containers.forEach(container => {
-                    const table = container.querySelector('table');
-                    if (table) {
-                        const tbody = table.querySelector('#table-body');
-                        if (tbody) {
-                            tbody.innerHTML = '';
-                        }
-                    }
-                });
-            }
+        // ULTIMATE runtime fix for broken static HTML
+        (function ultimateFix() {
+            // 1. Clear the tbody
+            const tbody = document.getElementById('table-body');
+            if (tbody) tbody.innerHTML = '';
 
-            // Remove any leaked table elements anywhere in the document that are not inside the proper tbody
+            // 2. Remove any stray table elements outside the tbody
             document.querySelectorAll('tr, td').forEach(el => {
-                const properTbody = el.closest('#table-body');
-                if (!properTbody) {
-                    el.remove();
+                if (!el.closest('#table-body')) {
+                    if (el.parentNode) el.parentNode.removeChild(el);
                 }
             });
+
+            // 3. If there are still stray elements after the table container, nuke them
+            const universe = document.getElementById('universe-section');
+            if (universe) {
+                const tableContainer = universe.querySelector('.bg-zinc-900');
+                if (tableContainer) {
+                    let sibling = tableContainer.nextSibling;
+                    while (sibling) {
+                        const next = sibling.nextSibling;
+                        if (sibling.nodeType === 1 && sibling.tagName === 'SCRIPT') break;
+                        if (sibling.parentNode) sibling.parentNode.removeChild(sibling);
+                        sibling = next;
+                    }
+                }
+            }
         })();
 
-        // Force early render
+        // Force render
         setTimeout(() => {
             if (typeof companies !== 'undefined' && companies.length > 0 && typeof renderTable === 'function') {
                 renderTable(companies);
             }
-        }, 200);
-    </script><tr class="company-row text-sm">
-                <td class="pl-4 py-2.5">
-                    <button onclick="toggleWatchlist(5, event)" class="watch-star text-lg text-slate-600">
-                        <i class="fa-solid fa-star"></i>
-                    </button>
-                </td>
-                <td class="font-medium py-2.5 pr-2">Apollo Silver</td>
-                <td class="py-2.5"><span class="font-mono text-xs bg-zinc-800 px-2 py-px rounded">APGOF</span></td>
-                <td class="py-2.5"><span class="data-badge px-2 py-px rounded-2xl type-silver">Silver</span></td>
-                <td class="py-2.5 text-zinc-300">Developer</td>
-                <td class="py-2.5 text-center"><span class="data-badge px-2 py-px rounded-2xl risk-high">High</span></td>
-                <td class="py-2.5 text-center"><span class="px-2 py-px text-[10px] rounded-xl bg-zinc-800 text-zinc-300">Mexico</span></td>
-                <td class="py-2.5 text-center"><span class="data-badge px-2 py-px rounded-2xl font-semibold bg-emerald-900 text-emerald-300">64</span></td>
-                <td class="py-2.5 text-right pr-3 tabular-nums font-medium">$148M</td>
-                <td class="py-2.5 text-right pr-3">$2.44</td>
+        }, 100);
+    </script>
                 <td class="py-2.5 text-center"><span class="data-badge px-2 py-px rounded-2xl dma-above">Above</span></td>
                 <td class="py-2.5 pl-2 pr-1 text-xs text-zinc-400 max-w-[260px] line-clamp-2">
                     High-grade silver project in Mexico. <span class="text-amber-400/70 text-[10px]">(detailed thesis for premium users)</span>
