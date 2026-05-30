@@ -2539,14 +2539,20 @@ volatile. Always do your own due diligence.
             return;
         }
 
-        const isLikelyTicker = rawValue.length <= 6 && /^[A-Za-z.]+$/.test(rawValue);
-        const ticker = isLikelyTicker ? rawValue.toUpperCase() : rawValue.toUpperCase().slice(0, 8);
-        const nameGuess = !isLikelyTicker ? rawValue : rawValue.toUpperCase();
+        // Try to extract a ticker (best effort)
+        let ticker = rawValue.toUpperCase().replace(/[^A-Z.]/g, '').slice(0, 8);
+        let nameGuess = rawValue;
+
+        // If input looks like a name (long or has spaces), use cleaned version as name and best-guess ticker
+        if (rawValue.length > 8 || rawValue.includes(' ')) {
+            nameGuess = rawValue;
+            ticker = rawValue.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 6);
+        }
 
         // Start with defaults
         let payload = {
             name: nameGuess,
-            ticker: isLikelyTicker ? ticker : '',
+            ticker: ticker,
             type: 'Gold',
             category: 'Explorer',
             risk: 'High',
@@ -2558,7 +2564,7 @@ volatile. Always do your own due diligence.
             above_50dma: null
         };
 
-        // Try to fetch rich data from Yahoo via our function
+        // Always attempt to fetch data using the best ticker guess
         try {
             const res = await fetch(`/.netlify/functions/refresh-prices?ticker=${ticker}`);
             if (res.ok) {

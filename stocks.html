@@ -235,9 +235,7 @@
                             item.price = d.price;
                             if (d.market_cap != null) item.market_cap = d.market_cap;
                             if (d.above_50dma !== undefined) item.above_50dma = d.above_50dma;
-                            if (d.description) {
-                                item.comment = `${d.description.substring(0, 220)}... (detailed thesis for premium users.)`;
-                            }
+                            item.comment = "(detailed thesis for premium users.)";
                             successCount++;
                         }
                     }
@@ -362,10 +360,7 @@
                     if (d.market_cap != null) newItem.market_cap = d.market_cap;
                     if (d.name) newItem.name = d.name;
                     if (d.above_50dma !== undefined) newItem.above_50dma = d.above_50dma;
-                    const summary = d.description 
-                        ? d.description.substring(0, 220) + '...' 
-                        : 'Company activities summary from Yahoo Finance.';
-                    newItem.comment = `${summary} (detailed thesis for premium users.)`;
+                    newItem.comment = "(detailed thesis for premium users.)";
                 }
             } catch (e) {
                 console.warn("Could not fetch data for new stock", ticker);

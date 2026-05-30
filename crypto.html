@@ -225,7 +225,7 @@
                         const info = json[cgId];
                         if (info.usd != null) item.price = info.usd;
                         if (info.usd_market_cap != null) item.market_cap = info.usd_market_cap;
-                        item.comment = `${item.name} — see CoinGecko for market data and project details. (detailed thesis for premium users.)`;
+                        item.comment = "(detailed thesis for premium users.)";
                     }
                 });
 
@@ -375,7 +375,7 @@
                             desc = desc.split('.')[0].substring(0, 180);
                             newItem.comment = `${desc}. (detailed thesis for premium users.)`;
                         } else {
-                            newItem.comment = `${newItem.name} — see CoinGecko for market data and project details. (detailed thesis for premium users.)`;
+                            newItem.comment = "(detailed thesis for premium users.)";
                         }
                     }
                 } catch (e) {

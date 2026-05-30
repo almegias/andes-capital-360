@@ -133,6 +133,7 @@ git reset --soft HEAD~1
 - **Watchlist on Stocks & Crypto pages** (High priority)
 - **Working "Add Company / Add Token" with premium detailed thesis** (High priority)
 - **Proprietary Scoring Algorithm** (to generate the 1-10 scores) — to be developed in parallel with Watchlist
+- **Detailed Investment Thesis** feature for premium users (manual or semi-automated generation of in-depth analysis)
 - Improved mobile experience
 - Better error handling and loading states on refresh
 
