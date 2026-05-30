@@ -160,7 +160,7 @@
                     <td class="py-3">${item.name}</td>
                     <td class="text-right pr-6 tabular-nums font-medium">$${item.price ? item.price.toFixed(2) : '—'}</td>
                     <td class="text-right pr-6 tabular-nums font-medium">${formatMarketCap(item.market_cap)}</td>
-                    <td class="text-right pr-6 tabular-nums font-medium">${item.score || 60} <span class="text-[10px] text-amber-400">Premium</span></td>
+                    <td class="text-right pr-6 tabular-nums font-medium"><span class="text-[10px] text-amber-400">Premium</span></td>
                     <td class="text-center py-3">${dmaText}</td>
                     <td class="py-3 text-xs text-zinc-400">${item.comment || ''}</td>
                 `;
@@ -235,7 +235,8 @@
                             item.price = d.price;
                             if (d.market_cap != null) item.market_cap = d.market_cap;
                             if (d.above_50dma !== undefined) item.above_50dma = d.above_50dma;
-                            item.comment = "Company activities summary from Yahoo Finance. (detailed thesis for premium users.)";
+                            const summary = d.description ? d.description.substring(0, 200) + '...' : 'Company activities summary from Yahoo Finance.';
+                            item.comment = `${summary} (detailed thesis for premium users.)`;
                             successCount++;
                         }
                     }
@@ -360,7 +361,8 @@
                     if (d.market_cap != null) newItem.market_cap = d.market_cap;
                     if (d.name) newItem.name = d.name;
                     if (d.above_50dma !== undefined) newItem.above_50dma = d.above_50dma;
-                    newItem.comment = "Company activities summary from Yahoo Finance. (detailed thesis for premium users.)";
+                    const summary = d.description ? d.description.substring(0, 200) + '...' : 'Company activities summary from Yahoo Finance.';
+                    newItem.comment = `${summary} (detailed thesis for premium users.)`;
                 }
             } catch (e) {
                 console.warn("Could not fetch data for new stock", ticker);

@@ -80,7 +80,7 @@
         <div class="max-w-screen-2xl mx-auto px-6 pt-8 pb-6">
             <h1 class="text-4xl font-display font-semibold tracking-tighter">Andes Capital 360's Selection</h1>
             <p class="mt-2 max-w-3xl text-sm text-zinc-400">
-                Disclaimer: This selection is for informational and educational purposes only and does not constitute investment advice. Digital assets with asymmetric potential. Cryptocurrencies are extremely volatile. Always do your own due diligence.
+                Disclaimer: This selection is for informational and educational purposes only and does not constitute investment advice. Cryptocurrencies are extremely volatile. Always do your own due diligence.
             </p>
             <p class="mt-1 max-w-3xl text-sm text-zinc-400">
                 The scores and comments provided are not investment advice. The scores go from 1 to 10, with 10 being the best. Our proprietary algorithm identifies risk-adjusted rewards, so that higher risk stocks or tokens may have a better score than lower risk ones, although they may be less suitable for individual portfolios. Both comments and scores are snapshots in time subject to rapid change based on news or market conditions.
@@ -159,7 +159,7 @@
                     <td class="py-3">${item.name}</td>
                     <td class="text-right pr-6 tabular-nums font-medium">$${item.price ? item.price.toLocaleString(undefined, {minimumFractionDigits: 4, maximumFractionDigits: 4}) : '—'}</td>
                     <td class="text-right pr-6 tabular-nums font-medium">${formatMarketCap(item.market_cap)}</td>
-                    <td class="text-right pr-6 tabular-nums font-medium">${item.score || 60} <span class="text-[10px] text-amber-400">Premium</span></td>
+                    <td class="text-right pr-6 tabular-nums font-medium"><span class="text-[10px] text-amber-400">Premium</span></td>
                     <td class="py-3 text-xs text-zinc-400">${item.comment || ''}</td>
                 `;
                 tbody.appendChild(row);
@@ -225,7 +225,7 @@
                         const info = json[cgId];
                         if (info.usd != null) item.price = info.usd;
                         if (info.usd_market_cap != null) item.market_cap = info.usd_market_cap;
-                        item.comment = "Token summary from CoinGecko. (detailed thesis for premium users.)";
+                        item.comment = `${item.name} is a cryptocurrency token tracked on CoinGecko. (detailed thesis for premium users.)`;
                     }
                 });
 
@@ -366,7 +366,7 @@
                             const info = priceJson[resolvedId];
                             if (info.usd != null) newItem.price = info.usd;
                             if (info.usd_market_cap != null) newItem.market_cap = info.usd_market_cap;
-                            newItem.comment = "Token summary from CoinGecko. (detailed thesis for premium users.)";
+                            newItem.comment = `${newItem.name} is a cryptocurrency token tracked on CoinGecko. (detailed thesis for premium users.)`;
                         }
                     }
                 } catch (e) {}

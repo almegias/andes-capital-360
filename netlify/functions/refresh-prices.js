@@ -80,6 +80,28 @@ async function fetchMarketCap(ticker) {
   }
 }
 
+async function fetchCompanyInfo(ticker) {
+  try {
+    const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${ticker}`;
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AndesCapital360/1.0)' },
+    });
+    if (!res.ok) return null;
+
+    const json = await res.json();
+    const quote = json?.quoteResponse?.result?.[0];
+    if (!quote) return null;
+
+    return {
+      marketCap: quote.marketCap ?? null,
+      shortName: quote.shortName || quote.longName || null,
+      longBusinessSummary: quote.longBusinessSummary || null
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
 exports.handler = async (event) => {
   const raw = (event.queryStringParameters?.ticker || '').trim().toUpperCase();
   if (!raw) {
@@ -100,14 +122,15 @@ exports.handler = async (event) => {
                || await fetchYahoo(sym, '6mo');
 
       if (data && data.price != null) {
-        const marketCap = await fetchMarketCap(sym);
+        const info = await fetchCompanyInfo(sym);
         return {
           statusCode: 200,
           body: JSON.stringify({
             ticker: raw,
             ...data,
-            market_cap: marketCap,
-            name: data.name || null,
+            market_cap: info?.marketCap || null,
+            name: info?.shortName || data.name || null,
+            description: info?.longBusinessSummary || null,
             yahoo_symbol: sym,
           }),
         };
