@@ -112,7 +112,7 @@
                 </button>
                 <span class="text-[10px] text-amber-400 -ml-2">Premium</span>
 
-                <button onclick="showWatchlist()" class="px-4 py-2 border border-zinc-700 rounded-2xl hover:bg-zinc-900">
+                <button id="watchlist-btn" onclick="showWatchlist()" class="px-4 py-2 border border-zinc-700 rounded-2xl hover:bg-zinc-900">
                     <i class="fa-solid fa-star text-amber-400"></i> <span>Watchlist</span>
                     <span id="watchlist-count" class="inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold bg-amber-400 text-zinc-950 rounded-full">0</span>
                 </button>
@@ -2447,8 +2447,9 @@ volatile. Always do your own due diligence.
                 <td class="py-2.5 pl-2 pr-1 text-xs text-zinc-400 max-w-[260px] line-clamp-2">
                     ${c.comment || ''} <span class="text-amber-400/70 text-[10px]">(detailed thesis for premium users)</span>
                 </td>
-                <td class="py-2.5 pr-4 text-right">
+                <td class="py-2.5 pr-4 text-right flex items-center justify-end gap-x-2">
                     <button onclick="showDetail(${c.id})" class="text-xs px-3 py-1 border border-zinc-600 rounded-2xl hover:bg-zinc-800">Details</button>
+                    <button onclick="deleteCompany(${c.id}, '${c.ticker}', '${c.name}'); event.stopImmediatePropagation();" class="text-red-400 hover:text-red-600 text-xs px-1">✕</button>
                 </td>
             `;
             tbody.appendChild(row);
@@ -2521,9 +2522,22 @@ volatile. Always do your own due diligence.
         }
     }
 
+    let showOnlyWatchlist = false;
+
     function showWatchlist() {
-        const filtered = companies.filter(c => watchlist.includes(c.id));
-        renderTable(filtered);
+        showOnlyWatchlist = !showOnlyWatchlist;
+        const btn = document.getElementById('watchlist-btn');
+        if (btn) {
+            btn.innerHTML = showOnlyWatchlist 
+                ? '<i class="fa-solid fa-star text-amber-400"></i> <span>Show All</span>' 
+                : '<i class="fa-solid fa-star text-amber-400"></i> <span>Watchlist</span>';
+        }
+        if (showOnlyWatchlist) {
+            const filtered = companies.filter(c => watchlist.includes(c.id));
+            renderTable(filtered);
+        } else {
+            renderTable(companies);
+        }
     }
 
     // ==================== ADD COMPANY (Supabase) ====================
@@ -2646,6 +2660,17 @@ volatile. Always do your own due diligence.
     function showDetail(id) {
         const c = companies.find(x => x.id === id);
         if (c) alert(`${c.name}\n\n${c.comment || 'No thesis yet.'}`);
+    }
+
+    async function deleteCompany(id, ticker, name) {
+        if (!confirm(`Delete ${name || ticker} from the list?`)) return;
+        try {
+            await supabaseClient.from('companies').delete().eq('id', id);
+            companies = companies.filter(c => c.id !== id);
+            renderTable(companies);
+        } catch (err) {
+            alert('Delete failed: ' + err.message);
+        }
     }
 
     function showAddCompanyModal() {

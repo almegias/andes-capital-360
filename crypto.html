@@ -168,6 +168,10 @@
                     <td class="text-right pr-6 tabular-nums font-medium">${formatMarketCap(item.market_cap)}</td>
                     <td class="text-right pr-6 tabular-nums font-medium"><span class="text-[10px] text-amber-400">Premium</span></td>
                     <td class="py-3 text-xs text-zinc-400">${item.comment || ''}</td>
+                    <td class="py-3 pr-4 text-right">
+                        <button onclick="deleteCrypto('${item.ticker}'); event.stopImmediatePropagation();" 
+                                class="text-red-400 hover:text-red-600 text-xs px-1">✕</button>
+                    </td>
                 `;
                 tbody.appendChild(row);
             });
@@ -441,6 +445,15 @@
             showOnlyWatchlist = true;
             const btn = document.getElementById('watchlist-btn');
             if (btn) btn.innerHTML = '<i class="fa-solid fa-star text-amber-400"></i> <span>Show All</span>';
+            renderTable();
+        }
+
+        function deleteCrypto(ticker) {
+            if (!confirm(`Delete ${ticker} from the list?`)) return;
+            data = data.filter(item => item.ticker !== ticker);
+            cryptoWatchlist = cryptoWatchlist.filter(t => t !== ticker);
+            localStorage.setItem('cryptoWatchlist', JSON.stringify(cryptoWatchlist));
+            saveToLocalStorage();
             renderTable();
         }
     </script>

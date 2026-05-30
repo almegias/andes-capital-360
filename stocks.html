@@ -274,8 +274,8 @@
                         }
                     }
 
-                    // Fallback: direct Yahoo quote for market cap if still missing
-                    if (!item.market_cap) {
+                    // Always try to get fresh market cap from Yahoo quote (more reliable for this)
+                    try {
                         const quoteRes = await fetch(`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${item.ticker}`);
                         if (quoteRes.ok) {
                             const q = await quoteRes.json();
@@ -284,7 +284,7 @@
                                 item.market_cap = quote.marketCap;
                             }
                         }
-                    }
+                    } catch (e) {}
                 } catch (e) {}
                 await new Promise(r => setTimeout(r, 150));
             }
