@@ -183,7 +183,6 @@ volatile. Always do your own due diligence.
                             <th class="text-center py-3">SCORE</th>
                             <th class="text-right py-3 pr-3">MKT CAP</th>
                             <th class="text-right py-3 pr-3">PRICE</th>
-                            <th class="text-center py-3">50-DAY MA</th>
                             <th class="text-left py-3 pl-2">COMMENT</th>
                             <th class="w-10"></th>
                         </tr>
@@ -2445,7 +2444,6 @@ volatile. Always do your own due diligence.
                 <td class="py-2.5 text-center"><span class="data-badge px-2 py-px rounded-2xl font-semibold bg-emerald-900 text-emerald-300"><span class="text-[10px]">Premium</span></span></td>
                 <td class="py-2.5 text-right pr-3 tabular-nums font-medium">${formatMarketCap(c.market_cap)}</td>
                 <td class="py-2.5 text-right pr-3">$${c.current_price ? c.current_price.toFixed(2) : '—'}</td>
-                <td class="py-2.5 text-center"><span class="data-badge px-2 py-px rounded-2xl ${dmaClass}">${dmaText}</span></td>
                 <td class="py-2.5 pl-2 pr-1 text-xs text-zinc-400 max-w-[260px] line-clamp-2">
                     ${c.comment || ''} <span class="text-amber-400/70 text-[10px]">(detailed thesis for premium users)</span>
                 </td>
@@ -2539,14 +2537,30 @@ volatile. Always do your own due diligence.
             return;
         }
 
-        // Try to extract a ticker (best effort)
-        let ticker = rawValue.toUpperCase().replace(/[^A-Z.]/g, '').slice(0, 8);
+        let ticker = '';
         let nameGuess = rawValue;
 
-        // If input looks like a name (long or has spaces), use cleaned version as name and best-guess ticker
-        if (rawValue.length > 8 || rawValue.includes(' ')) {
+        // If it looks like a ticker (short, no spaces), use directly
+        if (rawValue.length <= 8 && !rawValue.includes(' ')) {
+            ticker = rawValue.toUpperCase().replace(/[^A-Z.]/g, '').slice(0, 8);
+        } else {
+            // Treat as name → search Yahoo for ticker
             nameGuess = rawValue;
-            ticker = rawValue.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 6);
+            try {
+                const searchRes = await fetch(`https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(rawValue)}`);
+                if (searchRes.ok) {
+                    const searchData = await searchRes.json();
+                    if (searchData.quotes && searchData.quotes.length > 0) {
+                        const best = searchData.quotes.find(q => q.quoteType === 'EQUITY') || searchData.quotes[0];
+                        if (best && best.symbol) {
+                            ticker = best.symbol;
+                            if (best.shortname) nameGuess = best.shortname;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn("Yahoo search for ticker failed");
+            }
         }
 
         // Start with defaults

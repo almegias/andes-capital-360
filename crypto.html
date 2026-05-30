@@ -63,7 +63,7 @@
                     <i class="fa-solid fa-credit-card"></i> <span>Subscribe $14.99/mo</span>
                 </button>
 
-                <button onclick="showCryptoWatchlist()" class="px-4 py-2 border border-zinc-700 rounded-2xl hover:bg-zinc-900 flex items-center gap-x-2 text-sm">
+                <button id="watchlist-btn" onclick="toggleCryptoWatchlistView()" class="px-4 py-2 border border-zinc-700 rounded-2xl hover:bg-zinc-900 flex items-center gap-x-2 text-sm">
                     <i class="fa-solid fa-star text-amber-400"></i> <span>Watchlist</span>
                 </button>
 
@@ -130,6 +130,7 @@
 
         let data = [...cryptos];
         let cryptoWatchlist = JSON.parse(localStorage.getItem('cryptoWatchlist') || '[]');
+        let showOnlyWatchlist = false;
 
         function formatMarketCap(value) {
             if (!value) return '—';
@@ -142,7 +143,11 @@
             const tbody = document.getElementById('table-body');
             tbody.innerHTML = '';
 
-            const toRender = filteredData || data;
+            let toRender = filteredData || data;
+
+            if (showOnlyWatchlist && !filteredData) {
+                toRender = data.filter(item => cryptoWatchlist.includes(item.ticker));
+            }
 
             toRender.forEach((item) => {
                 const isWatched = cryptoWatchlist.includes(item.ticker);
@@ -404,11 +409,25 @@
                 element.classList.add('text-amber-400');
             }
             localStorage.setItem('cryptoWatchlist', JSON.stringify(cryptoWatchlist));
+            renderTable();
+        }
+
+        function toggleCryptoWatchlistView() {
+            showOnlyWatchlist = !showOnlyWatchlist;
+            const btn = document.getElementById('watchlist-btn');
+            if (btn) {
+                btn.innerHTML = showOnlyWatchlist 
+                    ? '<i class="fa-solid fa-star text-amber-400"></i> <span>Show All</span>' 
+                    : '<i class="fa-solid fa-star text-amber-400"></i> <span>Watchlist</span>';
+            }
+            renderTable();
         }
 
         function showCryptoWatchlist() {
-            const filtered = data.filter(item => cryptoWatchlist.includes(item.ticker));
-            renderTable(filtered);
+            showOnlyWatchlist = true;
+            const btn = document.getElementById('watchlist-btn');
+            if (btn) btn.innerHTML = '<i class="fa-solid fa-star text-amber-400"></i> <span>Show All</span>';
+            renderTable();
         }
     </script>
 </body>

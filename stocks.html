@@ -63,7 +63,7 @@
                     <i class="fa-solid fa-credit-card"></i> <span>Subscribe $14.99/mo</span>
                 </button>
 
-                <button onclick="showStockWatchlist()" class="px-4 py-2 border border-zinc-700 rounded-2xl hover:bg-zinc-900 flex items-center gap-x-2 text-sm">
+                <button id="watchlist-btn" onclick="toggleStockWatchlistView()" class="px-4 py-2 border border-zinc-700 rounded-2xl hover:bg-zinc-900 flex items-center gap-x-2 text-sm">
                     <i class="fa-solid fa-star text-amber-400"></i> <span>Watchlist</span>
                 </button>
 
@@ -111,7 +111,6 @@
                         <th class="text-right py-3 pr-6">PRICE</th>
                         <th class="text-right py-3 pr-6">MARKET CAP</th>
                         <th class="text-right py-3 pr-6">SCORE</th>
-                        <th class="text-center py-3">50-DAY MA</th>
                         <th class="text-left py-3 pl-2">COMMENT</th>
                     </tr>
                 </thead>
@@ -131,6 +130,7 @@
 
         let data = [...stocks];
         let stockWatchlist = JSON.parse(localStorage.getItem('stockWatchlist') || '[]');
+        let showOnlyWatchlist = false;
 
         function formatMarketCap(value) {
             if (!value) return '—';
@@ -143,7 +143,11 @@
             const tbody = document.getElementById('table-body');
             tbody.innerHTML = '';
 
-            const toRender = filteredData || data;
+            let toRender = filteredData || data;
+
+            if (showOnlyWatchlist && !filteredData) {
+                toRender = data.filter(item => stockWatchlist.includes(item.ticker));
+            }
 
             toRender.forEach((item) => {
                 const isWatched = stockWatchlist.includes(item.ticker);
@@ -161,7 +165,6 @@
                     <td class="text-right pr-6 tabular-nums font-medium">$${item.price ? item.price.toFixed(2) : '—'}</td>
                     <td class="text-right pr-6 tabular-nums font-medium">${formatMarketCap(item.market_cap)}</td>
                     <td class="text-right pr-6 tabular-nums font-medium"><span class="text-[10px] text-amber-400">Premium</span></td>
-                    <td class="text-center py-3">${dmaText}</td>
                     <td class="py-3 text-xs text-zinc-400">${item.comment || ''}</td>
                 `;
                 tbody.appendChild(row);
@@ -179,11 +182,28 @@
                 element.classList.add('text-amber-400');
             }
             localStorage.setItem('stockWatchlist', JSON.stringify(stockWatchlist));
+
+            // Re-render to respect current view (All vs Watchlist only)
+            renderTable();
         }
 
+        function toggleStockWatchlistView() {
+            showOnlyWatchlist = !showOnlyWatchlist;
+            const btn = document.getElementById('watchlist-btn');
+            if (btn) {
+                btn.innerHTML = showOnlyWatchlist 
+                    ? '<i class="fa-solid fa-star text-amber-400"></i> <span>Show All</span>' 
+                    : '<i class="fa-solid fa-star text-amber-400"></i> <span>Watchlist</span>';
+            }
+            renderTable();
+        }
+
+        // Legacy support
         function showStockWatchlist() {
-            const filtered = data.filter(item => stockWatchlist.includes(item.ticker));
-            renderTable(filtered);
+            showOnlyWatchlist = true;
+            const btn = document.getElementById('watchlist-btn');
+            if (btn) btn.innerHTML = '<i class="fa-solid fa-star text-amber-400"></i> <span>Show All</span>';
+            renderTable();
         }
 
         const STORAGE_KEY = 'andes_stocks_prices';
@@ -237,6 +257,18 @@
                             if (d.above_50dma !== undefined) item.above_50dma = d.above_50dma;
                             item.comment = "(detailed thesis for premium users.)";
                             successCount++;
+                        }
+                    }
+
+                    // Fallback: direct Yahoo quote for market cap if still missing
+                    if (!item.market_cap) {
+                        const quoteRes = await fetch(`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${item.ticker}`);
+                        if (quoteRes.ok) {
+                            const q = await quoteRes.json();
+                            const quote = q?.quoteResponse?.result?.[0];
+                            if (quote?.marketCap) {
+                                item.market_cap = quote.marketCap;
+                            }
                         }
                     }
                 } catch (e) {}
