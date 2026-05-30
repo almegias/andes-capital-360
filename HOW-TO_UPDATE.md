@@ -128,6 +128,16 @@ git reset --soft HEAD~1
 
 **Pro tip:** Always hard refresh (Cmd/Ctrl + Shift + R) after deploying or when testing the Refresh Prices button.
 
+## 9. Remaining Features to Make the Site Fully Functional (Prioritized)
+
+- **Watchlist on Stocks & Crypto pages** (High priority)
+- **Working "Add Company / Add Token" with premium detailed thesis** (High priority)
+- **Proprietary Scoring Algorithm** (to generate the 1-10 scores) — to be developed in parallel with Watchlist
+- Improved mobile experience
+- Better error handling and loading states on refresh
+
+The Algorithm feature will determine how the Score column is calculated across all pages.
+
 ## 9. New Multi-Page Structure (April 2026 update)
 
 The site now has a proper homepage + three sections:
