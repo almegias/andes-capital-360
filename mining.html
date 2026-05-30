@@ -193,109 +193,39 @@ volatile. Always do your own due diligence.
     </div>
 
     <script>
-        // Aggressive cleanup of any static table garbage left from previous page saves
-        (function cleanupBrokenTable() {
-            const tableContainer = document.querySelector('#universe-section .bg-zinc-900');
-            if (tableContainer) {
-                // Remove everything after the proper table structure
-                const table = tableContainer.querySelector('table');
-                if (table) {
-                    const tbody = table.querySelector('tbody');
-                    if (tbody) {
-                        // Nuke all children
-                        tbody.innerHTML = '';
+        // Nuclear option: completely nuke any static junk between the table and the real JS
+        (function nuclearCleanup() {
+            const universe = document.getElementById('universe-section');
+            if (universe) {
+                // Find the table container
+                const containers = universe.querySelectorAll('.bg-zinc-900');
+                containers.forEach(container => {
+                    const table = container.querySelector('table');
+                    if (table) {
+                        const tbody = table.querySelector('#table-body');
+                        if (tbody) {
+                            tbody.innerHTML = '';
+                        }
                     }
-                }
+                });
             }
 
-            // Also remove any orphaned <tr> or <td> that leaked outside the table
-            document.querySelectorAll('tr.company-row, td').forEach(el => {
-                if (!el.closest('#table-body')) {
+            // Remove any leaked table elements anywhere in the document that are not inside the proper tbody
+            document.querySelectorAll('tr, td').forEach(el => {
+                const properTbody = el.closest('#table-body');
+                if (!properTbody) {
                     el.remove();
                 }
             });
+        })();
 
-        // Force an early render once Supabase client is ready
+        // Force early render
         setTimeout(() => {
             if (typeof companies !== 'undefined' && companies.length > 0 && typeof renderTable === 'function') {
                 renderTable(companies);
             }
-        }, 300);
-    </script>
-                <td class="py-2.5 text-center"><span class="data-badge px-2 py-px rounded-2xl dma-above">Above</span></td>
-                <td class="py-2.5 pl-2 pr-1 text-xs text-zinc-400 max-w-[260px] line-clamp-2">
-                    Diabillos silver-gold project in Argentina. <span class="text-amber-400/70 text-[10px]">(detailed thesis for premium users)</span>
-                </td>
-                <td class="py-2.5 pr-4 text-right">
-                    <button onclick="showDetail(1)" class="text-xs px-3 py-1 border border-zinc-600 rounded-2xl hover:bg-zinc-800">Details</button>
-                </td>
-            </tr><tr class="company-row text-sm">
-                <td class="pl-4 py-2.5">
-                    <button onclick="toggleWatchlist(2, event)" class="watch-star text-lg text-slate-600">
-                        <i class="fa-solid fa-star"></i>
-                    </button>
-                </td>
-                <td class="font-medium py-2.5 pr-2">Aftermath Silver</td>
-                <td class="py-2.5"><span class="font-mono text-xs bg-zinc-800 px-2 py-px rounded">AAGFF</span></td>
-                <td class="py-2.5"><span class="data-badge px-2 py-px rounded-2xl type-silver">Silver</span></td>
-                <td class="py-2.5 text-zinc-300">Developer</td>
-                <td class="py-2.5 text-center"><span class="data-badge px-2 py-px rounded-2xl risk-high">High</span></td>
-                <td class="py-2.5 text-center"><span class="px-2 py-px text-[10px] rounded-xl bg-zinc-800 text-zinc-300">Peru</span></td>
-                <td class="py-2.5 text-center"><span class="data-badge px-2 py-px rounded-2xl font-semibold bg-emerald-900 text-emerald-300">56</span></td>
-                <td class="py-2.5 text-right pr-3 tabular-nums font-medium">$72M</td>
-                <td class="py-2.5 text-right pr-3">$0.60</td>
-                <td class="py-2.5 text-center"><span class="data-badge px-2 py-px rounded-2xl dma-above">Above</span></td>
-                <td class="py-2.5 pl-2 pr-1 text-xs text-zinc-400 max-w-[260px] line-clamp-2">
-                    Berenguela silver-copper-manganese project. <span class="text-amber-400/70 text-[10px]">(detailed thesis for premium users)</span>
-                </td>
-                <td class="py-2.5 pr-4 text-right">
-                    <button onclick="showDetail(2)" class="text-xs px-3 py-1 border border-zinc-600 rounded-2xl hover:bg-zinc-800">Details</button>
-                </td>
-            </tr><tr class="company-row text-sm">
-                <td class="pl-4 py-2.5">
-                    <button onclick="toggleWatchlist(3, event)" class="watch-star text-lg text-slate-600">
-                        <i class="fa-solid fa-star"></i>
-                    </button>
-                </td>
-                <td class="font-medium py-2.5 pr-2">Alamos Gold</td>
-                <td class="py-2.5"><span class="font-mono text-xs bg-zinc-800 px-2 py-px rounded">AGI</span></td>
-                <td class="py-2.5"><span class="data-badge px-2 py-px rounded-2xl type-gold">Gold</span></td>
-                <td class="py-2.5 text-zinc-300">Producer</td>
-                <td class="py-2.5 text-center"><span class="data-badge px-2 py-px rounded-2xl risk-medium">Medium</span></td>
-                <td class="py-2.5 text-center"><span class="px-2 py-px text-[10px] rounded-xl bg-zinc-800 text-zinc-300">Canada / Mexico</span></td>
-                <td class="py-2.5 text-center"><span class="data-badge px-2 py-px rounded-2xl font-semibold bg-emerald-900 text-emerald-300">74</span></td>
-                <td class="py-2.5 text-right pr-3 tabular-nums font-medium">$1.9B</td>
-                <td class="py-2.5 text-right pr-3">$40.35</td>
-                <td class="py-2.5 text-center"><span class="data-badge px-2 py-px rounded-2xl dma-below">Below</span></td>
-                <td class="py-2.5 pl-2 pr-1 text-xs text-zinc-400 max-w-[260px] line-clamp-2">
-                    Mid-tier gold producer with strong growth. <span class="text-amber-400/70 text-[10px]">(detailed thesis for premium users)</span>
-                </td>
-                <td class="py-2.5 pr-4 text-right">
-                    <button onclick="showDetail(3)" class="text-xs px-3 py-1 border border-zinc-600 rounded-2xl hover:bg-zinc-800">Details</button>
-                </td>
-            </tr><tr class="company-row text-sm">
-                <td class="pl-4 py-2.5">
-                    <button onclick="toggleWatchlist(4, event)" class="watch-star text-lg text-slate-600">
-                        <i class="fa-solid fa-star"></i>
-                    </button>
-                </td>
-                <td class="font-medium py-2.5 pr-2">Andean Precious Metals</td>
-                <td class="py-2.5"><span class="font-mono text-xs bg-zinc-800 px-2 py-px rounded">ANPMF</span></td>
-                <td class="py-2.5"><span class="data-badge px-2 py-px rounded-2xl type-silver">Silver</span></td>
-                <td class="py-2.5 text-zinc-300">Producer</td>
-                <td class="py-2.5 text-center"><span class="data-badge px-2 py-px rounded-2xl risk-high">High</span></td>
-                <td class="py-2.5 text-center"><span class="px-2 py-px text-[10px] rounded-xl bg-zinc-800 text-zinc-300">Bolivia</span></td>
-                <td class="py-2.5 text-center"><span class="data-badge px-2 py-px rounded-2xl font-semibold bg-emerald-900 text-emerald-300">71</span></td>
-                <td class="py-2.5 text-right pr-3 tabular-nums font-medium">$741M</td>
-                <td class="py-2.5 text-right pr-3">$4.90</td>
-                <td class="py-2.5 text-center"><span class="data-badge px-2 py-px rounded-2xl dma-below">Below</span></td>
-                <td class="py-2.5 pl-2 pr-1 text-xs text-zinc-400 max-w-[260px] line-clamp-2">
-                    Bolivia silver-gold producer with rapid growth. <span class="text-amber-400/70 text-[10px]">(detailed thesis for premium users)</span>
-                </td>
-                <td class="py-2.5 pr-4 text-right">
-                    <button onclick="showDetail(4)" class="text-xs px-3 py-1 border border-zinc-600 rounded-2xl hover:bg-zinc-800">Details</button>
-                </td>
-            </tr><tr class="company-row text-sm">
+        }, 200);
+    </script><tr class="company-row text-sm">
                 <td class="pl-4 py-2.5">
                     <button onclick="toggleWatchlist(5, event)" class="watch-star text-lg text-slate-600">
                         <i class="fa-solid fa-star"></i>
