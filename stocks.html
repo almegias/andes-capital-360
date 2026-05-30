@@ -166,6 +166,10 @@
                     <td class="text-right pr-6 tabular-nums font-medium">${formatMarketCap(item.market_cap)}</td>
                     <td class="text-right pr-6 tabular-nums font-medium"><span class="text-[10px] text-amber-400">Premium</span></td>
                     <td class="py-3 text-xs text-zinc-400">${item.comment || ''}</td>
+                    <td class="py-3 pr-4 text-right">
+                        <button onclick="deleteStock('${item.ticker}'); event.stopImmediatePropagation();" 
+                                class="text-red-400 hover:text-red-600 text-xs px-1">✕</button>
+                    </td>
                 `;
                 tbody.appendChild(row);
             });
@@ -182,6 +186,7 @@
                 element.classList.add('text-amber-400');
             }
             localStorage.setItem('stockWatchlist', JSON.stringify(stockWatchlist));
+            syncStockWatchlistToSupabase();
 
             // Re-render to respect current view (All vs Watchlist only)
             renderTable();
@@ -203,6 +208,15 @@
             showOnlyWatchlist = true;
             const btn = document.getElementById('watchlist-btn');
             if (btn) btn.innerHTML = '<i class="fa-solid fa-star text-amber-400"></i> <span>Show All</span>';
+            renderTable();
+        }
+
+        function deleteStock(ticker) {
+            if (!confirm(`Delete ${ticker} from the list?`)) return;
+            data = data.filter(item => item.ticker !== ticker);
+            stockWatchlist = stockWatchlist.filter(t => t !== ticker);
+            localStorage.setItem('stockWatchlist', JSON.stringify(stockWatchlist));
+            saveToLocalStorage();
             renderTable();
         }
 
@@ -316,6 +330,39 @@
 
         // Start
         initializePrices();
+        loadStockWatchlistFromSupabase();
+
+        // ==================== SUPABASE WATCHLIST FOR STOCKS ====================
+        async function loadStockWatchlistFromSupabase() {
+            const userId = getUserId();
+            try {
+                const { data, error } = await supabaseClient
+                    .from('watchlists')
+                    .select('company_id')
+                    .eq('user_id', userId)
+                    .like('company_id', 'stock:%');
+
+                if (!error && data) {
+                    stockWatchlist = data.map(item => item.company_id.replace('stock:', ''));
+                    localStorage.setItem('stockWatchlist', JSON.stringify(stockWatchlist));
+                }
+            } catch (e) {}
+        }
+
+        async function syncStockWatchlistToSupabase() {
+            const userId = getUserId();
+            // Simple approach: delete all for user with prefix, then re-insert
+            try {
+                await supabaseClient.from('watchlists').delete().eq('user_id', userId).like('company_id', 'stock:%');
+                const inserts = stockWatchlist.map(ticker => ({
+                    user_id: userId,
+                    company_id: `stock:${ticker}`
+                }));
+                if (inserts.length > 0) {
+                    await supabaseClient.from('watchlists').insert(inserts);
+                }
+            } catch (e) {}
+        }
 
         // ==================== ADD STOCK (Simplified) ====================
         function showAddStockModal() {
@@ -367,8 +414,8 @@
             const ticker = raw.toUpperCase();
 
             // Avoid duplicates
-            if (data.some(d => d.ticker === ticker)) {
-                alert("This ticker is already in the list.");
+            if (data.some(d => d.ticker.toUpperCase() === ticker)) {
+                alert("Stock already listed.");
                 hideAddStockModal();
                 return;
             }

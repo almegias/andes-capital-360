@@ -108,6 +108,7 @@
                         <th class="w-8 pl-6"></th>
                         <th class="text-left py-3">TICKER</th>
                         <th class="text-left py-3">NAME</th>
+                        <th class="text-center py-3">RANK</th>
                         <th class="text-right py-3 pr-6">PRICE</th>
                         <th class="text-right py-3 pr-6">MARKET CAP</th>
                         <th class="text-right py-3 pr-6">SCORE</th>
@@ -121,11 +122,11 @@
 
     <script>
         const cryptos = [
-            { ticker: 'BTC', name: 'Bitcoin' },
-            { ticker: 'ETH', name: 'Ethereum' },
-            { ticker: 'FARTCOIN', name: 'Fartcoin' },
-            { ticker: 'SOL', name: 'Solana' },
-            { ticker: 'USELESS', name: 'Useless' }
+            { ticker: 'BTC', name: 'Bitcoin', rank: null },
+            { ticker: 'ETH', name: 'Ethereum', rank: null },
+            { ticker: 'FARTCOIN', name: 'Fartcoin', rank: null },
+            { ticker: 'SOL', name: 'Solana', rank: null },
+            { ticker: 'USELESS', name: 'Useless', rank: null }
         ];
 
         let data = [...cryptos];
@@ -162,6 +163,7 @@
                     </td>
                     <td class="font-mono text-amber-400 font-semibold">${item.ticker}</td>
                     <td class="py-3">${item.name}</td>
+                    <td class="text-center py-3">${item.rank || '—'}</td>
                     <td class="text-right pr-6 tabular-nums font-medium">$${item.price ? item.price.toLocaleString(undefined, {minimumFractionDigits: 4, maximumFractionDigits: 4}) : '—'}</td>
                     <td class="text-right pr-6 tabular-nums font-medium">${formatMarketCap(item.market_cap)}</td>
                     <td class="text-right pr-6 tabular-nums font-medium"><span class="text-[10px] text-amber-400">Premium</span></td>
@@ -216,7 +218,8 @@
             }
 
             const ids = Object.values(coingeckoMap).join(',');
-            const url = `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_market_cap=true`;
+            // Fetch prices + market caps + ranks in one efficient call
+            const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&order=market_cap_desc&per_page=100&page=1&sparkline=false`;
 
             try {
                 const res = await fetch(url);
@@ -224,15 +227,19 @@
 
                 const json = await res.json();
 
-                data.forEach(item => {
-                    const cgId = coingeckoMap[item.ticker];
-                    if (cgId && json[cgId]) {
-                        const info = json[cgId];
-                        if (info.usd != null) item.price = info.usd;
-                        if (info.usd_market_cap != null) item.market_cap = info.usd_market_cap;
-                        item.comment = "(detailed thesis for premium users.)";
-                    }
-                });
+                // The response is now an array from /markets
+                if (Array.isArray(json)) {
+                    data.forEach(item => {
+                        const cgId = coingeckoMap[item.ticker];
+                        const coinData = json.find(c => c.id === cgId);
+                        if (coinData) {
+                            if (coinData.current_price != null) item.price = coinData.current_price;
+                            if (coinData.market_cap != null) item.market_cap = coinData.market_cap;
+                            if (coinData.market_cap_rank != null) item.rank = coinData.market_cap_rank;
+                            item.comment = "(detailed thesis for premium users.)";
+                        }
+                    });
+                }
 
             } catch (e) {
                 console.error('Failed to fetch crypto prices from CoinGecko', e);
@@ -350,13 +357,20 @@
                 name: resolvedName,
                 price: null,
                 market_cap: null,
+                rank: null,
                 score: 60,
                 above_50dma: null,
                 comment: "User added"
             };
 
-            if (data.some(d => d.ticker === newItem.ticker)) {
-                alert("This token is already in the list.");
+            if (data.some(d => d.ticker.toUpperCase() === newItem.ticker.toUpperCase())) {
+                alert("Token already listed.");
+                hideAddCryptoModal();
+                return;
+            }
+
+            if (!resolvedId) {
+                alert(`No record of ${raw}.`);
                 hideAddCryptoModal();
                 return;
             }

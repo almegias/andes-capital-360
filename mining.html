@@ -2579,21 +2579,47 @@ volatile. Always do your own due diligence.
         };
 
         // Always attempt to fetch data using the best ticker guess
-        try {
-            const res = await fetch(`/.netlify/functions/refresh-prices?ticker=${ticker}`);
-            if (res.ok) {
-                const d = await res.json();
+        if (ticker) {
+            try {
+                const res = await fetch(`/.netlify/functions/refresh-prices?ticker=${ticker}`);
+                if (res.ok) {
+                    const d = await res.json();
 
-                if (d.name) payload.name = d.name;
-                if (d.price != null) payload.current_price = d.price;
-                if (d.market_cap != null) payload.market_cap = d.market_cap;
-                if (d.above_50dma !== undefined) payload.above_50dma = d.above_50dma;
-                if (d.description) {
-                    payload.comment = d.description.substring(0, 220) + '... (detailed thesis for premium users.)';
+                    if (d.name) payload.name = d.name;
+                    if (d.price != null) payload.current_price = d.price;
+                    if (d.market_cap != null) payload.market_cap = d.market_cap;
+                    if (d.above_50dma !== undefined) payload.above_50dma = d.above_50dma;
+                    if (d.description) {
+                        payload.comment = d.description.substring(0, 220) + '... (detailed thesis for premium users.)';
+                    }
                 }
+            } catch (e) {
+                console.warn("Auto-fetch for new company failed, using defaults");
             }
-        } catch (e) {
-            console.warn("Auto-fetch for new company failed, using defaults");
+        }
+
+        // Duplicate check
+        const existing = companies.find(c => 
+            (c.ticker && c.ticker.toUpperCase() === payload.ticker.toUpperCase()) ||
+            (c.name && c.name.toLowerCase() === payload.name.toLowerCase())
+        );
+        if (existing) {
+            alert('Company already listed.');
+            hideAddModal();
+            return;
+        }
+
+        // Basic check if it looks like a mining company
+        const miningKeywords = ['gold', 'silver', 'copper', 'mining', 'mineral', 'exploration', 'resource', 'ore'];
+        const descLower = (payload.comment || '').toLowerCase();
+        const nameLower = payload.name.toLowerCase();
+        const isMiningRelated = miningKeywords.some(kw => descLower.includes(kw) || nameLower.includes(kw));
+
+        if (ticker && !isMiningRelated) {
+            alert(`${payload.name} does not appear to be a mining company. Please use the Other Stocks page.`);
+            window.open('stocks.html', '_blank');
+            hideAddModal();
+            return;
         }
 
         try {
