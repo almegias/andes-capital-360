@@ -14,8 +14,8 @@
  */
 
 const NEWS_API_KEY = process.env.NEWS_API_KEY; // Optional - NewsAPI.org
-const LLM_API_KEY = process.env.LLM_API_KEY;     // Required - xAI (Grok) or OpenAI
-const LLM_PROVIDER = process.env.LLM_PROVIDER || 'openai'; // 'xai' | 'openai'
+const LLM_API_KEY = process.env.LLM_API_KEY;     // Required - xAI Grok API Key
+const LLM_PROVIDER = process.env.LLM_PROVIDER || 'xai'; // 'xai' (recommended) | 'openai'
 
 const USER_PROMPT_TEMPLATE = (companyName) => 
   `Based on available news and sentiment, is ${companyName} a viable investment for an investor or speculator looking for asymmetric risk/reward opportunities? Consider pros and cons focusing in particular on news and sentiment related to economic viability such as high-grade resource potential, positive drill results, permitting milestones, financing announcements, excessive debt or dilution. Make a final recommendation and assign a score to the company from 1 to 10, with 10 being the best.`;
@@ -76,38 +76,39 @@ Return ONLY the JSON object described above.`;
 
   let apiUrl, headers, body;
 
-  if (LLM_PROVIDER === 'xai' || LLM_PROVIDER === 'grok') {
-    // xAI Grok API
+  // Default to xAI (Grok) as requested
+  if (LLM_PROVIDER === 'xai' || LLM_PROVIDER === 'grok' || LLM_PROVIDER !== 'openai') {
+    // xAI Grok API (recommended)
     apiUrl = 'https://api.x.ai/v1/chat/completions';
     headers = {
       'Authorization': `Bearer ${LLM_API_KEY}`,
       'Content-Type': 'application/json'
     };
     body = {
-      model: 'grok-3', // or grok-2 as fallback
+      model: 'grok-3', // or 'grok-2-latest' if grok-3 not available
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userMessage }
       ],
       temperature: 0.3,
-      max_tokens: 1200
+      max_tokens: 1400
     };
   } else {
-    // OpenAI compatible (default)
+    // OpenAI fallback
     apiUrl = 'https://api.openai.com/v1/chat/completions';
     headers = {
       'Authorization': `Bearer ${LLM_API_KEY}`,
       'Content-Type': 'application/json'
     };
     body = {
-      model: 'gpt-4o-mini', // cheap and capable
+      model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userMessage }
       ],
       temperature: 0.3,
       response_format: { type: "json_object" },
-      max_tokens: 1200
+      max_tokens: 1400
     };
   }
 
@@ -150,11 +151,24 @@ exports.handler = async (event) => {
     // 2. Call LLM
     const llmResult = await callLLM(newsContext, name);
 
+    // Structure the thesis nicely for storage
+    const formattedThesis = llmResult.error ? null : 
+      `${llmResult.summary || ''}
+
+**Pros:**
+${(llmResult.pros || []).map(p => `- ${p}`).join('\n')}
+
+**Cons:**
+${(llmResult.cons || []).map(c => `- ${c}`).join('\n')}
+
+**Recommendation:** ${llmResult.recommendation || ''}`;
+
     return {
       statusCode: 200,
       body: JSON.stringify({
         company: { name, ticker },
         llm: llmResult,
+        formatted_thesis: formattedThesis,
         news_sources: newsResult.headlines,
         news_note: newsResult.note,
         prompt_used: USER_PROMPT_TEMPLATE(name)

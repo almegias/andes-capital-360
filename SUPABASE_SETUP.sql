@@ -72,7 +72,8 @@ alter table public.companies
 -- LLM-powered News & Thesis fields (for Mentions/News sub-score + Investment Thesis)
 alter table public.companies
   add column if not exists llm_news_score numeric,           -- 1-10 score from LLM (used for X/News sub-score)
-  add column if not exists llm_thesis text,                  -- Full analysis + recommendation from LLM
+  add column if not exists investment_thesis text,           -- Full LLM-generated analysis + recommendation (premium content)
+  add column if not exists public_teaser text,               -- Short public-facing comment (visible to all users)
   add column if not exists llm_last_analyzed timestamptz,
   add column if not exists market_cap_override bigint;       -- Manual override when auto-fetch fails
 
