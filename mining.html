@@ -204,8 +204,12 @@
                     <div class="text-xs text-zinc-500">Weighted scoring for Mining Companies (visible only to admins)</div>
                 </div>
                 <div class="flex items-center gap-x-3">
-                    <button onclick="recalculateAllScores()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl text-sm font-medium flex items-center gap-x-2">
+                    <button onclick="refreshAdminDataFromSupabase()" class="px-4 py-2 border border-zinc-600 text-zinc-300 hover:bg-zinc-800 rounded-2xl text-sm flex items-center gap-x-2">
                         <i class="fa-solid fa-sync"></i>
+                        <span>Refresh from DB</span>
+                    </button>
+                    <button onclick="recalculateAllScores()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl text-sm font-medium flex items-center gap-x-2">
+                        <i class="fa-solid fa-calculator"></i>
                         <span>Recalculate All Scores</span>
                     </button>
                     <button onclick="hideAdminScoreModal()" class="text-xl text-zinc-400 hover:text-white px-2">×</button>
@@ -380,6 +384,24 @@
             adminScoreModalOpen = false;
         }
 
+        async function refreshAdminDataFromSupabase() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('companies')
+                    .select('*')
+                    .order('name', { ascending: true });
+
+                if (error) throw error;
+
+                companies = data || [];
+                renderTable(companies);
+                await renderAdminScoreTable();
+
+            } catch (err) {
+                alert('Failed to refresh data from Supabase: ' + err.message);
+            }
+        }
+
         async function renderAdminScoreTable() {
             const tbody = document.getElementById('admin-score-tbody');
             if (!tbody || !companies.length) return;
@@ -463,8 +485,8 @@
                     </td>
                     
                     <td class="py-2.5 text-center">
-                        <button onclick="deleteCompany(${company.id}, '${company.ticker}', '${company.name.replace(/'/g, "\\'")}')" 
-                                class="text-red-400 hover:text-red-600 px-2 text-lg leading-none" title="Delete permanently">
+                        <button onclick="deleteFromAdmin(${company.id}, '${company.ticker}', '${company.name.replace(/'/g, "\\'")}')" 
+                                class="text-red-400 hover:text-red-600 px-2 text-lg leading-none" title="Delete permanently from database">
                             ✕
                         </button>
                     </td>
@@ -661,8 +683,19 @@
             }
 
             alert(`Saved new scores for ${updated} companies.`);
+
+            // Force a full refresh from Supabase so the main table shows the new scores
+            const { data: freshData, error: freshError } = await supabaseClient
+                .from('companies')
+                .select('*')
+                .order('name', { ascending: true });
+
+            if (!freshError && freshData) {
+                companies = freshData;
+            }
+
             await renderAdminScoreTable();
-            renderTable(companies); // refresh main table
+            renderTable(companies);
 
             btns.forEach(b => b.disabled = false);
         }
@@ -1127,12 +1160,13 @@
         }
 
         async function deleteCompany(id, ticker, name) {
-            if (!confirm(`Permanently delete ${name || ticker} from the database? This cannot be undone.`)) return;
+            if (!confirm(`Permanently delete ${name || ticker} from the database?\n\nThis action cannot be undone.`)) return;
+
             try {
                 const { error } = await supabaseClient.from('companies').delete().eq('id', id);
                 if (error) throw error;
 
-                // Re-fetch fresh data from Supabase to ensure it's really gone
+                // Always do a full fresh fetch from Supabase after delete
                 const { data, error: fetchError } = await supabaseClient
                     .from('companies')
                     .select('*')
@@ -1141,14 +1175,48 @@
                 if (fetchError) throw fetchError;
 
                 companies = data || [];
+
+                // Refresh main table
                 renderTable(companies);
 
-                // If admin modal is open, refresh it too
+                // Refresh admin table if open
                 if (adminScoreModalOpen) {
                     await renderAdminScoreTable();
                 }
 
-                alert(`${name || ticker} has been permanently deleted.`);
+                alert(`${name || ticker} has been permanently deleted from the database.`);
+
+            } catch (err) {
+                alert('Delete failed: ' + err.message);
+                console.error('Delete error:', err);
+            }
+        }
+
+        // Dedicated delete function for the Admin Scores table (more robust)
+        async function deleteFromAdmin(id, ticker, name) {
+            if (!confirm(`Delete ${name || ticker} permanently?\n\nThis will remove it from the database immediately.`)) {
+                return;
+            }
+
+            try {
+                const { error } = await supabaseClient.from('companies').delete().eq('id', id);
+                if (error) throw error;
+
+                // Full refresh from database
+                const { data, error: fetchError } = await supabaseClient
+                    .from('companies')
+                    .select('*')
+                    .order('name', { ascending: true });
+
+                if (fetchError) throw fetchError;
+
+                companies = data || [];
+
+                // Force refresh both tables
+                renderTable(companies);
+                await renderAdminScoreTable();
+
+                alert(`${name || ticker} was permanently deleted.`);
 
             } catch (err) {
                 alert('Delete failed: ' + err.message);
