@@ -385,8 +385,13 @@
         }
 
         async function refreshAdminDataFromSupabase() {
-            const btns = document.querySelectorAll('#admin-score-modal button');
-            btns.forEach(b => b.disabled = true);
+            const refreshBtn = document.querySelector('#admin-score-modal button[onclick*="refreshAdminDataFromSupabase"]');
+            const originalText = refreshBtn ? refreshBtn.innerHTML : '';
+
+            if (refreshBtn) {
+                refreshBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>Refreshing...</span>`;
+                refreshBtn.disabled = true;
+            }
 
             try {
                 const { data, error } = await supabaseClient
@@ -406,7 +411,10 @@
                 alert('Failed to refresh data from Supabase: ' + err.message);
                 console.error(err);
             } finally {
-                btns.forEach(b => b.disabled = false);
+                if (refreshBtn) {
+                    refreshBtn.innerHTML = originalText || '<i class="fa-solid fa-sync"></i> <span>Refresh from DB</span>';
+                    refreshBtn.disabled = false;
+                }
             }
         }
 
@@ -711,7 +719,7 @@
 
             console.log('%c[Admin] Recalculate complete. Forcing full data reload from Supabase...', 'color:#4ade80');
 
-            // Extremely defensive: always do a brand new fetch after bulk updates
+            // Extremely defensive full refresh
             const { data: freshData, error: freshError } = await supabaseClient
                 .from('companies')
                 .select('*')
@@ -719,16 +727,17 @@
 
             if (freshError) {
                 console.error('Failed to re-fetch after score recalc:', freshError);
-                alert('Scores were saved, but failed to refresh the view. Please click "Refresh from DB" or hard refresh the page.');
             } else {
                 companies = freshData || [];
-                console.log('%c[Admin] Fresh data loaded after recalc. Count:', 'color:#4ade80', companies.length);
             }
 
             await renderAdminScoreTable();
             renderTable(companies);
 
-            alert(`Saved new scores for ${updated} companies.\n\nIf the main table still shows old scores, click the "Refresh from DB" button above or do a hard refresh (Cmd+Shift+R).`);
+            // Automatically run the refresh function for maximum reliability
+            await refreshAdminDataFromSupabase();
+
+            alert(`Saved new scores for ${updated} companies.\nThe tables have been refreshed from the database.`);
 
             btns.forEach(b => b.disabled = false);
         }
@@ -1228,29 +1237,25 @@
         // Dedicated delete function for the Admin Scores table (more robust)
         async function deleteFromAdmin(id, ticker, name) {
             const confirmed = confirm(
-                `PERMANENTLY DELETE ${name || ticker}?\n\n` +
-                `This will remove the row from the Supabase database.\n` +
-                `This action CANNOT be undone.`
+                `Delete row ID ${id} for "${name || ticker}"?\n\n` +
+                `This removes ONLY this specific row.\n` +
+                `Duplicates with the same name will remain unless you choose to clean them.`
             );
             if (!confirmed) return;
 
             console.log('%c[Admin Delete] Attempting to delete id:', 'color:#f87171', id);
 
             try {
-                // Step 1: Delete from Supabase
                 const { error: deleteError } = await supabaseClient
                     .from('companies')
                     .delete()
                     .eq('id', id);
 
-                if (deleteError) {
-                    console.error('Delete error from Supabase:', deleteError);
-                    throw deleteError;
-                }
+                if (deleteError) throw deleteError;
 
                 console.log('%c[Admin Delete] Delete call succeeded for id:', 'color:#4ade80', id);
 
-                // Step 2: Immediately re-fetch the ENTIRE table fresh
+                // Fresh fetch
                 const { data: freshData, error: fetchError } = await supabaseClient
                     .from('companies')
                     .select('*')
@@ -1258,21 +1263,63 @@
 
                 if (fetchError) throw fetchError;
 
-                // Step 3: Completely replace our local data with what Supabase actually has now
                 companies = freshData || [];
 
-                console.log('%c[Admin Delete] Fresh data fetched. Remaining companies with this name:', 'color:orange',
-                    companies.filter(c => c.name === name).length);
+                const remaining = companies.filter(c => c.name === name);
+                console.log('%c[Admin Delete] Remaining rows with this name after delete:', 'color:orange', remaining.length);
 
-                // Step 4: Force full re-renders
                 renderTable(companies);
                 await renderAdminScoreTable();
 
-                alert(`${name || ticker} deletion processed.\n\nIf it still appears, there may be duplicate rows in the database with the same name.`);
+                if (remaining.length > 0) {
+                    const cleanAll = confirm(
+                        `Row ID ${id} deleted.\n\n` +
+                        `There are still ${remaining.length} row(s) with the name "${name}".\n\n` +
+                        `Would you like to delete ALL remaining rows with this exact name now?`
+                    );
+
+                    if (cleanAll) {
+                        await deleteAllDuplicatesByName(name);
+                    } else {
+                        alert(`One row deleted. ${remaining.length} duplicate(s) with the name "${name}" still exist in the database.`);
+                    }
+                } else {
+                    alert(`"${name || ticker}" has been completely removed from the database.`);
+                }
 
             } catch (err) {
                 console.error('DeleteFromAdmin failed:', err);
                 alert('Delete failed: ' + err.message);
+            }
+        }
+
+        async function deleteAllDuplicatesByName(companyName) {
+            if (!confirm(`This will delete EVERY row where name = "${companyName}".\nThis cannot be undone. Continue?`)) {
+                return;
+            }
+
+            try {
+                const { error } = await supabaseClient
+                    .from('companies')
+                    .delete()
+                    .eq('name', companyName);
+
+                if (error) throw error;
+
+                const { data: freshData } = await supabaseClient
+                    .from('companies')
+                    .select('*')
+                    .order('name', { ascending: true });
+
+                companies = freshData || [];
+                renderTable(companies);
+                await renderAdminScoreTable();
+
+                alert(`All rows named "${companyName}" have been deleted.`);
+
+            } catch (err) {
+                alert('Bulk delete failed: ' + err.message);
+                console.error(err);
             }
         }
 
