@@ -144,19 +144,19 @@
         <!-- Table -->
         <div class="bg-zinc-900 border border-zinc-800 rounded-3xl overflow-hidden">
             <div class="overflow-x-auto">
-                <table class="w-full text-sm min-w-[1200px]">
+                <table class="w-full text-sm min-w-[1100px]">
                     <thead>
                         <tr class="text-xs text-zinc-400 font-semibold border-b border-zinc-700">
                             <th class="w-8 pl-4"></th>
-                            <th class="text-left py-3 pl-2">COMPANY</th>
-                            <th class="text-left py-3">TICKER</th>
-                            <th class="text-left py-3">TYPE</th>
-                            <th class="text-left py-3">CATEGORY</th>
-                            <th class="text-center py-3">JURISDICTION</th>
-                            <th class="text-center py-3">SCORE</th>
-                            <th class="text-right py-3 pr-3">PRICE</th>
+                            <th class="w-44 text-left py-3 pl-2">COMPANY</th>
+                            <th class="w-20 text-left py-3">TICKER</th>
+                            <th class="w-24 text-left py-3">TYPE</th>
+                            <th class="w-24 text-left py-3">CATEGORY</th>
+                            <th class="w-28 text-center py-3">JURISDICTION</th>
+                            <th class="w-16 text-center py-3">SCORE</th>
+                            <th class="w-20 text-right py-3 pr-3">PRICE</th>
                             <th class="text-left py-3 pl-2">COMMENT</th>
-                            <th class="w-10"></th>
+                            <th class="w-8"></th>
                         </tr>
                     </thead>
                     <tbody id="table-body" class="divide-y divide-zinc-800"></tbody>
@@ -296,17 +296,17 @@
                             <i class="fa-solid fa-star"></i>
                         </button>
                     </td>
-                    <td class="font-medium py-2.5 pr-2">${c.name}</td>
-                    <td class="py-2.5"><span class="font-mono text-xs bg-zinc-800 px-2 py-px rounded">${c.ticker}</span></td>
-                    <td class="py-2.5"><span class="data-badge px-2 py-px rounded-2xl ${typeClass}">${c.type}</span></td>
-                    <td class="py-2.5 text-zinc-300">${c.category}</td>
-                    <td class="py-2.5 text-center"><span class="px-2 py-px text-[10px] rounded-xl bg-zinc-800 text-zinc-300">${juris}</span></td>
-                    <td class="py-2.5 text-center"><span class="data-badge px-2 py-px rounded-2xl font-semibold bg-emerald-900 text-emerald-300"><span class="text-[10px]">Premium</span></span></td>
-                    <td class="py-2.5 text-right pr-3">$${c.current_price ? c.current_price.toFixed(2) : '—'}</td>
-                    <td class="py-2.5 pl-2 pr-1 text-xs text-zinc-400 max-w-[260px] line-clamp-2">
+                    <td class="font-medium py-2.5 pr-2 w-44">${c.name}</td>
+                    <td class="py-2.5 w-20"><span class="font-mono text-xs bg-zinc-800 px-2 py-px rounded">${c.ticker}</span></td>
+                    <td class="py-2.5 w-24"><span class="data-badge px-2 py-px rounded-2xl ${typeClass}">${c.type}</span></td>
+                    <td class="py-2.5 text-zinc-300 w-24">${c.category}</td>
+                    <td class="py-2.5 text-center w-28"><span class="px-2 py-px text-[10px] rounded-xl bg-zinc-800 text-zinc-300">${juris}</span></td>
+                    <td class="py-2.5 text-center w-16"><span class="data-badge px-2 py-px rounded-2xl font-semibold bg-emerald-900 text-emerald-300"><span class="text-[10px]">Premium</span></span></td>
+                    <td class="py-2.5 text-right pr-3 w-20">$${c.current_price ? c.current_price.toFixed(2) : '—'}</td>
+                    <td class="py-2.5 pl-2 pr-1 text-xs text-zinc-400">
                         ${c.comment || ''} <span class="text-amber-400/70 text-[10px]">(detailed thesis for premium users)</span>
                     </td>
-                    <td class="py-2.5 pr-4 text-right flex items-center justify-end gap-x-2">
+                    <td class="py-2.5 pr-4 text-right flex items-center justify-end gap-x-2 w-8">
                         <button onclick="showDetail(${c.id})" class="text-xs px-3 py-1 border border-zinc-600 rounded-2xl hover:bg-zinc-800">Details</button>
                         <button onclick="deleteCompany(${c.id}, '${c.ticker}', '${c.name}'); event.stopImmediatePropagation();" class="text-red-400 hover:text-red-600 text-xs px-1">✕</button>
                     </td>

@@ -106,11 +106,12 @@
                 <thead>
                     <tr class="text-xs text-zinc-400 font-semibold border-b border-zinc-700">
                         <th class="w-8 pl-6"></th>
-                        <th class="text-left py-3">TICKER</th>
-                        <th class="text-left py-3">NAME</th>
-                        <th class="text-right py-3 pr-6">PRICE</th>
-                        <th class="text-right py-3 pr-6">SCORE</th>
+                        <th class="w-20 text-left py-3">TICKER</th>
+                        <th class="w-44 text-left py-3">NAME</th>
+                        <th class="w-20 text-right py-3 pr-6">PRICE</th>
+                        <th class="w-16 text-right py-3 pr-6">SCORE</th>
                         <th class="text-left py-3 pl-2">COMMENT</th>
+                        <th class="w-8 pr-4"></th>
                     </tr>
                 </thead>
                 <tbody id="table-body" class="divide-y divide-zinc-800"></tbody>
@@ -154,17 +155,17 @@
                 const row = document.createElement('tr');
                 row.className = 'hover:bg-zinc-800/50';
                 row.innerHTML = `
-                    <td class="pl-6 py-3">
+                    <td class="pl-6 py-3 w-8">
                         <button onclick="toggleStockWatchlist('${item.ticker}', this)" class="text-lg ${isWatched ? 'text-amber-400' : 'text-slate-600'}">
                             <i class="fa-solid fa-star"></i>
                         </button>
                     </td>
-                    <td class="font-mono text-amber-400 font-semibold">${item.ticker}</td>
-                    <td class="py-3">${item.name}</td>
-                    <td class="text-right pr-6 tabular-nums font-medium">$${item.price ? item.price.toFixed(2) : '—'}</td>
-                    <td class="text-right pr-6 tabular-nums font-medium"><span class="text-[10px] text-amber-400">Premium</span></td>
+                    <td class="font-mono text-amber-400 font-semibold w-20">${item.ticker}</td>
+                    <td class="py-3 w-44">${item.name}</td>
+                    <td class="text-right pr-6 tabular-nums font-medium w-20">$${item.price ? item.price.toFixed(2) : '—'}</td>
+                    <td class="text-right pr-6 tabular-nums font-medium w-16"><span class="text-[10px] text-amber-400">Premium</span></td>
                     <td class="py-3 text-xs text-zinc-400">${item.comment || ''}</td>
-                    <td class="py-3 pr-4 text-right">
+                    <td class="py-3 pr-4 text-right w-8">
                         <button onclick="deleteStock('${item.ticker}'); event.stopImmediatePropagation();" 
                                 class="text-red-400 hover:text-red-600 text-xs px-1">✕</button>
                     </td>

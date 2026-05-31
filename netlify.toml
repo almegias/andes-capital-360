@@ -5,14 +5,14 @@
 [functions]
   directory = "netlify/functions"
 
-# Reduce aggressive caching so Refresh button and updates appear quickly
+# Light caching header — keeps the site reasonably fresh while still being fast.
+# Good for the Refresh Prices button and frequent data updates.
 [[headers]]
   for = "/*"
   [headers.values]
-    Cache-Control = "public, max-age=0, must-revalidate"
+    Cache-Control = "public, max-age=60, stale-while-revalidate=300"
 
-# SPA redirect (functions are automatically excluded by Netlify)
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+# NOTE: Removed the catch-all "/* → /index.html" SPA redirect.
+# This is a multi-page site (index.html + mining.html + stocks.html + crypto.html),
+# not a single-page app. The old redirect could cause unexpected behavior
+# and was not needed. Direct file access now works cleanly.
