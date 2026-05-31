@@ -219,7 +219,7 @@
             <div class="p-6 overflow-auto flex-1">
                 <div class="mb-4 text-sm text-amber-400">
                     <strong>Note:</strong> Beta is auto-fetched from Yahoo on Refresh. Insider Ownership % and X/News Score (1-10) are manual for now. Jurisdiction risk is now more comprehensive.
-                    <br><span class="text-xs text-zinc-500">If you don't see the "Add Thesis / Edit Thesis" column, make sure you have deployed the latest code.</span>
+                    <br><span class="text-xs text-zinc-500">Tip: Open DevTools Console (F12) when using this admin tool — it logs useful information about deletes and data refreshes.</span>
                 </div>
 
                 <table class="w-full text-sm">
@@ -385,6 +385,9 @@
         }
 
         async function refreshAdminDataFromSupabase() {
+            const btns = document.querySelectorAll('#admin-score-modal button');
+            btns.forEach(b => b.disabled = true);
+
             try {
                 const { data, error } = await supabaseClient
                     .from('companies')
@@ -397,10 +400,34 @@
                 renderTable(companies);
                 await renderAdminScoreTable();
 
+                console.log('%c[Admin] Full data reloaded from Supabase. Companies count:', 'color:#4ade80', companies.length);
+
             } catch (err) {
                 alert('Failed to refresh data from Supabase: ' + err.message);
+                console.error(err);
+            } finally {
+                btns.forEach(b => b.disabled = false);
             }
         }
+
+        // Extra aggressive full reload - can be called from console too if needed
+        window.forceFullDataReload = async function() {
+            console.log('%c[Admin] Performing aggressive full data reload from Supabase...', 'color:orange');
+            const { data, error } = await supabaseClient
+                .from('companies')
+                .select('*')
+                .order('name', { ascending: true });
+
+            if (error) {
+                console.error('Force reload failed:', error);
+                return;
+            }
+
+            companies = data || [];
+            renderTable(companies);
+            if (adminScoreModalOpen) await renderAdminScoreTable();
+            console.log('%c[Admin] Force reload complete. New count:', 'color:#4ade80', companies.length);
+        };
 
         async function renderAdminScoreTable() {
             const tbody = document.getElementById('admin-score-tbody');
@@ -682,20 +709,26 @@
                 }
             }
 
-            alert(`Saved new scores for ${updated} companies.`);
+            console.log('%c[Admin] Recalculate complete. Forcing full data reload from Supabase...', 'color:#4ade80');
 
-            // Force a full refresh from Supabase so the main table shows the new scores
+            // Extremely defensive: always do a brand new fetch after bulk updates
             const { data: freshData, error: freshError } = await supabaseClient
                 .from('companies')
                 .select('*')
                 .order('name', { ascending: true });
 
-            if (!freshError && freshData) {
-                companies = freshData;
+            if (freshError) {
+                console.error('Failed to re-fetch after score recalc:', freshError);
+                alert('Scores were saved, but failed to refresh the view. Please click "Refresh from DB" or hard refresh the page.');
+            } else {
+                companies = freshData || [];
+                console.log('%c[Admin] Fresh data loaded after recalc. Count:', 'color:#4ade80', companies.length);
             }
 
             await renderAdminScoreTable();
             renderTable(companies);
+
+            alert(`Saved new scores for ${updated} companies.\n\nIf the main table still shows old scores, click the "Refresh from DB" button above or do a hard refresh (Cmd+Shift+R).`);
 
             btns.forEach(b => b.disabled = false);
         }
@@ -1194,33 +1227,52 @@
 
         // Dedicated delete function for the Admin Scores table (more robust)
         async function deleteFromAdmin(id, ticker, name) {
-            if (!confirm(`Delete ${name || ticker} permanently?\n\nThis will remove it from the database immediately.`)) {
-                return;
-            }
+            const confirmed = confirm(
+                `PERMANENTLY DELETE ${name || ticker}?\n\n` +
+                `This will remove the row from the Supabase database.\n` +
+                `This action CANNOT be undone.`
+            );
+            if (!confirmed) return;
+
+            console.log('%c[Admin Delete] Attempting to delete id:', 'color:#f87171', id);
 
             try {
-                const { error } = await supabaseClient.from('companies').delete().eq('id', id);
-                if (error) throw error;
+                // Step 1: Delete from Supabase
+                const { error: deleteError } = await supabaseClient
+                    .from('companies')
+                    .delete()
+                    .eq('id', id);
 
-                // Full refresh from database
-                const { data, error: fetchError } = await supabaseClient
+                if (deleteError) {
+                    console.error('Delete error from Supabase:', deleteError);
+                    throw deleteError;
+                }
+
+                console.log('%c[Admin Delete] Delete call succeeded for id:', 'color:#4ade80', id);
+
+                // Step 2: Immediately re-fetch the ENTIRE table fresh
+                const { data: freshData, error: fetchError } = await supabaseClient
                     .from('companies')
                     .select('*')
                     .order('name', { ascending: true });
 
                 if (fetchError) throw fetchError;
 
-                companies = data || [];
+                // Step 3: Completely replace our local data with what Supabase actually has now
+                companies = freshData || [];
 
-                // Force refresh both tables
+                console.log('%c[Admin Delete] Fresh data fetched. Remaining companies with this name:', 'color:orange',
+                    companies.filter(c => c.name === name).length);
+
+                // Step 4: Force full re-renders
                 renderTable(companies);
                 await renderAdminScoreTable();
 
-                alert(`${name || ticker} was permanently deleted.`);
+                alert(`${name || ticker} deletion processed.\n\nIf it still appears, there may be duplicate rows in the database with the same name.`);
 
             } catch (err) {
+                console.error('DeleteFromAdmin failed:', err);
                 alert('Delete failed: ' + err.message);
-                console.error(err);
             }
         }
 
