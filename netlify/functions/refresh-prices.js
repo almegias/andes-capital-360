@@ -105,7 +105,8 @@ async function fetchCompanyInfo(ticker) {
       marketCap: quote.marketCap ?? null,
       shortName: quote.shortName || quote.longName || null,
       longBusinessSummary: quote.longBusinessSummary || null,
-      beta: quote.beta ?? null
+      beta: quote.beta ?? null,
+      // Note: Yahoo rarely returns reliable insider ownership via this free endpoint
     };
   } catch (e) {
     return null;
@@ -170,7 +171,7 @@ exports.handler = async (event) => {
             name: info?.shortName || data.name || null,
             description: shortDescription,
             yahoo_symbol: sym,
-            beta: info?.beta || null,
+            beta: info?.beta ?? null,
           }),
         };
       }

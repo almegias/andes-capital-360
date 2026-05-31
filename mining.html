@@ -214,7 +214,7 @@
 
             <div class="p-6 overflow-auto flex-1">
                 <div class="mb-4 text-sm text-amber-400">
-                    <strong>Note:</strong> X Mentions/News and Insider Ownership % are mostly manual for now. Beta is auto-fetched where possible.
+                    <strong>Note:</strong> Beta is auto-fetched from Yahoo on Refresh. Insider Ownership % and X/News Score (1-10) are manual for now (see analysis below). Jurisdiction risk is now more comprehensive.
                 </div>
 
                 <table class="w-full text-sm">
@@ -225,7 +225,8 @@
                             <th class="text-right py-2">Mkt Cap</th>
                             <th class="text-center py-2">Above 50D</th>
                             <th class="text-center py-2">Insider %</th>
-                            <th class="text-center py-2">X Score (1-10)</th>
+                            <th class="text-center py-2">X/LLM Score</th>
+                            <th class="text-center py-2">LLM Thesis</th>
                             <th class="text-center py-2">Jurisdiction</th>
                             <th class="text-center py-2 font-semibold">Final Score</th>
                             <th class="text-left py-2">Breakdown</th>
@@ -272,6 +273,21 @@
             return '$' + (value / 1e6).toFixed(0) + 'M';
         }
 
+        function getJurisdictionRiskBadge(jurisdiction) {
+            if (!jurisdiction) return '';
+            const lower = jurisdiction.toLowerCase();
+            const highRiskCountries = [
+                'africa', 'morocco', 'mali', 'burkina faso', 'ghana', 'tanzania', 'zimbabwe', 
+                'south africa', 'namibia', 'botswana', 'zambia', 'dr congo', 'congo', 'senegal',
+                'guinea', 'ivory coast', "cote d'ivoire", 'ethiopia', 'kenya', 'uganda',
+                'russia', 'kazakhstan', 'uzbekistan', 'tajikistan', 'kyrgyzstan',
+                'iran', 'iraq', 'syria', 'yemen', 'libya', 'saudi arabia', 'middle east',
+                'nicaragua'
+            ];
+            const hasRisk = highRiskCountries.some(c => lower.includes(c));
+            return hasRisk ? '<span class="text-red-400 ml-1">(Risk -1)</span>' : '';
+        }
+
         // ==================== ADMIN SCORE TOOL ====================
         let adminScoreModalOpen = false;
 
@@ -306,6 +322,7 @@
 
             companies.forEach(company => {
                 const { final_score, breakdown } = calculateMiningScore(company, companies);
+                const riskBadge = getJurisdictionRiskBadge(company.jurisdiction);
 
                 const row = document.createElement('tr');
                 row.className = 'hover:bg-zinc-800/60';
@@ -319,7 +336,13 @@
                                onchange="updateCompanyField(${company.id}, 'beta', this.value)">
                     </td>
                     
-                    <td class="py-2.5 text-right text-xs tabular-nums">${formatMarketCap(company.market_cap)}</td>
+                    <td class="py-2.5 text-right text-xs tabular-nums">
+                        ${formatMarketCap(company.market_cap_override || company.market_cap)}
+                        <input type="number" placeholder="Override" 
+                               class="block w-20 mt-1 text-[10px] bg-zinc-950 border border-zinc-700 rounded px-1 py-0.5"
+                               value="${company.market_cap_override || ''}"
+                               onchange="updateCompanyField(${company.id}, 'market_cap_override', this.value)">
+                    </td>
                     
                     <td class="py-2.5 text-center">
                         <span class="${company.above_50dma ? 'text-emerald-400' : 'text-red-400'}">
@@ -334,12 +357,27 @@
                     </td>
                     
                     <td class="py-2.5 text-center">
-                        <input type="number" step="0.5" min="1" max="10" value="${company.x_sentiment_score ?? 5}" 
-                               class="w-16 bg-zinc-950 border border-zinc-700 rounded px-1 py-0.5 text-sm"
-                               onchange="updateCompanyField(${company.id}, 'x_sentiment_score', this.value)">
+                        <div class="flex flex-col items-center gap-y-1">
+                            <input type="number" step="0.5" min="1" max="10" value="${company.llm_news_score ?? company.x_sentiment_score ?? 5}" 
+                                   class="w-16 bg-zinc-950 border border-zinc-700 rounded px-1 py-0.5 text-sm"
+                                   onchange="updateCompanyField(${company.id}, 'llm_news_score', this.value)">
+                            <button onclick="runLLMAnalysis(${company.id}, '${company.name.replace(/'/g, "\\'")}', '${company.ticker}')" 
+                                    class="text-[10px] px-2 py-0.5 border border-amber-700 text-amber-400 rounded hover:bg-amber-900/30">
+                                Run LLM
+                            </button>
+                        </div>
                     </td>
                     
-                    <td class="py-2.5 text-center text-xs max-w-[140px]">${company.jurisdiction || '—'}</td>
+                    <td class="py-2.5 text-center">
+                        ${company.llm_thesis 
+                            ? `<button onclick="reviewLLMThesis(${company.id})" class="text-[10px] px-2 py-1 bg-zinc-800 hover:bg-zinc-700 rounded">Review</button>` 
+                            : '<span class="text-zinc-600 text-[10px]">—</span>'}
+                    </td>
+                    
+                    <td class="py-2.5 text-center text-xs max-w-[140px]">
+                        ${company.jurisdiction || '—'}
+                        ${riskBadge}
+                    </td>
                     
                     <td class="py-2.5 text-center">
                         <span class="px-3 py-0.5 rounded-xl bg-emerald-900 text-emerald-300 font-semibold text-base">
@@ -374,6 +412,68 @@
                 await renderAdminScoreTable();
             } catch (e) {
                 alert('Failed to save: ' + e.message);
+            }
+        }
+
+        // ==================== LLM ANALYSIS FUNCTIONS ====================
+        async function runLLMAnalysis(companyId, companyName, ticker) {
+            const btns = document.querySelectorAll('#admin-score-modal button');
+            btns.forEach(b => b.disabled = true);
+
+            try {
+                const res = await fetch(`/.netlify/functions/analyze-company-llm?name=${encodeURIComponent(companyName)}&ticker=${ticker}`);
+                const data = await res.json();
+
+                if (!res.ok) throw new Error(data.error || 'LLM analysis failed');
+
+                const llm = data.llm || {};
+                const score = llm.score || 5;
+                const thesis = `${llm.summary || ''}\n\n**Pros:**\n${(llm.pros || []).map(p => `- ${p}`).join('\n')}\n\n**Cons:**\n${(llm.cons || []).map(c => `- ${c}`).join('\n')}\n\n**Recommendation:** ${llm.recommendation || ''}`;
+
+                // Save to Supabase
+                await supabaseClient.from('companies').update({
+                    llm_news_score: score,
+                    llm_thesis: thesis,
+                    llm_last_analyzed: new Date().toISOString()
+                }).eq('id', companyId);
+
+                // Update local state
+                const company = companies.find(c => c.id === companyId);
+                if (company) {
+                    company.llm_news_score = score;
+                    company.llm_thesis = thesis;
+                    company.llm_last_analyzed = new Date().toISOString();
+                }
+
+                alert(`LLM analysis complete for ${ticker}.\nScore: ${score}\n\nReview and edit the thesis using the "Review" button.`);
+                await renderAdminScoreTable();
+
+            } catch (err) {
+                alert('LLM Analysis failed: ' + err.message + '\n\nMake sure the Netlify function is deployed and LLM_API_KEY is configured.');
+                console.error(err);
+            } finally {
+                btns.forEach(b => b.disabled = false);
+            }
+        }
+
+        function reviewLLMThesis(companyId) {
+            const company = companies.find(c => c.id === companyId);
+            if (!company || !company.llm_thesis) return;
+
+            const newThesis = prompt(
+                `Edit Investment Thesis for ${company.name} (${company.ticker}).\n\nCurrent LLM output:`,
+                company.llm_thesis
+            );
+
+            if (newThesis !== null) {
+                // Save edited version
+                supabaseClient.from('companies').update({ llm_thesis: newThesis }).eq('id', companyId)
+                    .then(() => {
+                        company.llm_thesis = newThesis;
+                        renderAdminScoreTable();
+                        alert('Thesis updated and saved.');
+                    })
+                    .catch(e => alert('Save failed: ' + e.message));
             }
         }
 
@@ -508,14 +608,20 @@
 
             // 2. Market Cap Sub-score (weight 1/10)
             let mcSub = 5.0;
-            const mc = company.market_cap || 0;
+            const mc = company.market_cap_override || company.market_cap || 0;
             if (avgMarketCap > 0) {
                 const ratio = mc / avgMarketCap;
                 mcSub = Math.min(10, Math.max(1, 5 + (ratio - 1) * 3.5));
             }
 
-            // 3. X.com Mentions/News Sub-score (weight 4/10) — manual for now
-            let xSub = (company.x_sentiment_score != null) ? company.x_sentiment_score : 5.0;
+            // 3. Mentions & News Sub-score (weight 4/10)
+            // Priority: LLM-generated score > manual x_sentiment_score > default 5
+            let newsSub = 5.0;
+            if (company.llm_news_score != null) {
+                newsSub = company.llm_news_score;
+            } else if (company.x_sentiment_score != null) {
+                newsSub = company.x_sentiment_score;
+            }
 
             // 4. 50-Day Moving Average Sub-score (weight 2/10)
             let maSub = 5.0;
@@ -535,12 +641,26 @@
             if (insider < 15) insiderSub = Math.max(1, insiderSub - 1);
 
             // Weighted average
-            let raw = (betaSub * 0.2) + (mcSub * 0.1) + (xSub * 0.4) + (maSub * 0.2) + (insiderSub * 0.1);
+            let raw = (betaSub * 0.2) + (mcSub * 0.1) + (newsSub * 0.4) + (maSub * 0.2) + (insiderSub * 0.1);
 
-            // Jurisdiction Risk penalty
+            // Jurisdiction Risk penalty - improved detection
             const jurisLower = (company.jurisdiction || '').toLowerCase();
-            const risky = ['africa', 'russia', 'nicaragua', 'iran', 'iraq', 'syria', 'sudan', 'yemen', 'libya', 'middle east'];
-            const jurisdictionPenalty = risky.some(r => jurisLower.includes(r)) ? -1 : 0;
+            
+            // High-risk countries / regions (user-specified + practical additions for miners)
+            const highRiskCountries = [
+                // Africa (continent + major mining countries)
+                'africa', 'morocco', 'mali', 'burkina faso', 'ghana', 'tanzania', 'zimbabwe', 
+                'south africa', 'namibia', 'botswana', 'zambia', 'dr congo', 'congo', 'senegal',
+                'guinea', 'ivory coast', 'cote d\'ivoire', 'ethiopia', 'kenya', 'uganda',
+                // Russia & CIS
+                'russia', 'kazakhstan', 'uzbekistan', 'tajikistan', 'kyrgyzstan',
+                // Middle East
+                'iran', 'iraq', 'syria', 'yemen', 'libya', 'saudi arabia', 'middle east',
+                // Other high-risk per user
+                'nicaragua'
+            ];
+            
+            const jurisdictionPenalty = highRiskCountries.some(country => jurisLower.includes(country)) ? -1 : 0;
 
             raw += jurisdictionPenalty;
 
@@ -548,8 +668,19 @@
 
             const breakdown = {
                 stock_beta: { sub_score: Number(betaSub.toFixed(1)), value: beta, avg: Number(avgBeta.toFixed(1)), weight: 0.2 },
-                market_cap: { sub_score: Number(mcSub.toFixed(1)), value: mc, avg: Math.round(avgMarketCap), weight: 0.1 },
-                x_mentions_news: { sub_score: Number(xSub.toFixed(1)), value: xSub, note: "Manual input (1-10)", weight: 0.4 },
+                market_cap: { 
+                    sub_score: Number(mcSub.toFixed(1)), 
+                    value: mc, 
+                    avg: Math.round(avgMarketCap), 
+                    used_override: !!company.market_cap_override,
+                    weight: 0.1 
+                },
+                x_mentions_news: { 
+                    sub_score: Number(newsSub.toFixed(1)), 
+                    value: newsSub, 
+                    source: company.llm_news_score ? "LLM Analysis" : (company.x_sentiment_score ? "Manual" : "Default"),
+                    weight: 0.4 
+                },
                 moving_average_50d: { sub_score: Number(maSub.toFixed(1)), above_50dma: company.above_50dma, weight: 0.2 },
                 insider_ownership: { sub_score: Number(insiderSub.toFixed(1)), value: insider, avg: Number(avgInsider.toFixed(1)), weight: 0.1 },
                 jurisdiction_risk: { penalty: jurisdictionPenalty, jurisdictions: company.jurisdiction || 'N/A' },

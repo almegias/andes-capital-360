@@ -69,6 +69,13 @@ alter table public.companies
   add column if not exists x_sentiment_score numeric,
   add column if not exists score_breakdown jsonb;
 
+-- LLM-powered News & Thesis fields (for Mentions/News sub-score + Investment Thesis)
+alter table public.companies
+  add column if not exists llm_news_score numeric,           -- 1-10 score from LLM (used for X/News sub-score)
+  add column if not exists llm_thesis text,                  -- Full analysis + recommendation from LLM
+  add column if not exists llm_last_analyzed timestamptz,
+  add column if not exists market_cap_override bigint;       -- Manual override when auto-fetch fails
+
 -- Optional: change overall_score to support decimals (if it was integer)
 -- alter table public.companies alter column overall_score type numeric;
 
