@@ -59,7 +59,7 @@
                         <span class="font-display text-3xl font-semibold tracking-tighter">Andes Capital</span>
                         <span class="font-display text-3xl font-semibold tracking-tighter text-amber-400">360</span>
                     </div>
-                    <div class="px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-[10px] font-medium tracking-widest text-amber-400">HIGH RISK, HIGH REWARD</div>
+                    <div class="px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-[10px] font-medium tracking-widest text-amber-400">Asymmetric Risk/Reward Opportunities</div>
                 </div>
             </div>
 
@@ -93,12 +93,6 @@
         <div class="max-w-screen-2xl mx-auto px-6 pt-10 pb-8">
             <div class="max-w-3xl">
                 <h1 class="text-6xl font-display font-semibold tracking-tighter leading-none">Andes Capital 360's Selection</h1>
-
-                <div class="mt-4 max-w-2xl text-xs text-zinc-400 leading-snug">
-                    <strong>Disclaimer:</strong> This selection is for informational and educational purposes only and does not constitute investment advice. Junior mining stocks are highly speculative and volatile. Always do your own due diligence.
-                    <br><br>
-                    The scores and comments provided are not investment advice. The scores go from 1 to 10, with 10 being the best. Our proprietary algorithm identifies risk-adjusted rewards. Both comments and scores are snapshots in time subject to rapid change.
-                </div>
             </div>
         </div>
     </div>
@@ -112,6 +106,7 @@
             <div onclick="toggleFilter(this,'type','Silver')" class="filter-chip px-3 py-1 rounded-2xl border border-zinc-700 bg-zinc-900">Silver</div>
             <div onclick="toggleFilter(this,'type','Copper')" class="filter-chip px-3 py-1 rounded-2xl border border-zinc-700 bg-zinc-900">Copper</div>
             <div onclick="toggleFilter(this,'type','Critical Minerals')" class="filter-chip px-3 py-1 rounded-2xl border border-zinc-700 bg-zinc-900">Critical Minerals</div>
+            <div onclick="toggleFilter(this,'type','Uranium')" class="filter-chip px-3 py-1 rounded-2xl border border-zinc-700 bg-zinc-900">Uranium</div>
             <div onclick="toggleFilter(this,'type','Diversified')" class="filter-chip px-3 py-1 rounded-2xl border border-zinc-700 bg-zinc-900">Diversified</div>
 
             <div class="w-px h-4 bg-zinc-800 mx-1"></div>
@@ -126,13 +121,6 @@
             <input id="search" oninput="filterTable()" 
                    class="bg-zinc-900 border border-zinc-700 text-sm px-3 py-1.5 rounded-2xl w-64 focus:outline-none focus:border-amber-400" 
                    placeholder="Search name or ticker...">
-        </div>
-
-        <!-- Stats row -->
-        <div class="mb-3 flex items-center gap-x-4 text-xs px-1">
-            <div><span id="stat-total" class="font-semibold text-base">0</span> <span class="text-zinc-400">companies</span></div>
-            <div class="text-zinc-400">•</div>
-            <div><span id="stat-dma" class="font-semibold">—</span> <span class="text-zinc-400">above 50-day MA</span></div>
         </div>
 
         <!-- Cached notice -->
@@ -153,7 +141,10 @@
                             <th class="w-24 text-left py-3">TYPE</th>
                             <th class="w-24 text-left py-3">CATEGORY</th>
                             <th class="w-28 text-center py-3">JURISDICTION</th>
-                            <th class="w-16 text-center py-3">SCORE</th>
+                            <th class="w-16 text-center py-3">
+                                SCORE
+                                <div class="text-[9px] text-zinc-500 font-normal tracking-normal">1-lowest to 10-highest</div>
+                            </th>
                             <th class="w-20 text-right py-3 pr-3">PRICE</th>
                             <th class="text-left py-3 pl-2">COMMENT</th>
                             <th class="w-8"></th>
@@ -263,15 +254,6 @@
         }
 
         // ==================== RENDERING ====================
-        function updateStats() {
-            const totalEl = document.getElementById('stat-total');
-            const dmaEl = document.getElementById('stat-dma');
-            if (totalEl) totalEl.textContent = companies.length;
-
-            const above = companies.filter(c => c.above_50dma === true).length;
-            if (dmaEl) dmaEl.innerHTML = `${above}<span class="text-xl text-zinc-400">/${companies.length}</span>`;
-        }
-
         function renderTable(data) {
             const tbody = document.getElementById('table-body');
             if (!tbody) return;
@@ -658,7 +640,6 @@
             }
 
             renderTable(companies);
-            updateStats();
 
             const summary = `Done (${updatedCount} live prices, ${noDataCount} no Yahoo data) — saved to database`;
             btnText.textContent = summary;
@@ -686,7 +667,6 @@
 
             if (wc) wc.textContent = watchlist.length;
             renderTable(companies);
-            updateStats();
         }
 
         // Run a final safety cleanup in case any old static rows somehow exist
