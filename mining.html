@@ -208,6 +208,10 @@
                         <i class="fa-solid fa-sync"></i>
                         <span>Refresh from DB</span>
                     </button>
+                    <button onclick="promptDeleteAllDuplicates()" class="px-4 py-2 bg-red-800 hover:bg-red-700 text-white rounded-2xl text-sm flex items-center gap-x-2" title="Delete every row with a specific company name (use this to clean duplicates)">
+                        <i class="fa-solid fa-trash"></i>
+                        <span>Clean Duplicates by Name</span>
+                    </button>
                     <button onclick="recalculateAllScores()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl text-sm font-medium flex items-center gap-x-2">
                         <i class="fa-solid fa-calculator"></i>
                         <span>Recalculate All Scores</span>
@@ -217,9 +221,9 @@
             </div>
 
             <div class="p-6 overflow-auto flex-1">
-                <div class="mb-4 p-3 bg-red-900/30 border border-red-700 rounded-2xl text-sm text-red-300">
-                    <strong>Important:</strong> If a company still appears after using the ✕ button, there are duplicate rows in the database with the same name. 
-                    Use the small <strong>"all"</strong> button next to the ✕ to delete every copy of that company at once.
+                <div class="mb-4 p-3 bg-red-900/40 border border-red-700 rounded-2xl text-sm text-red-200">
+                    <strong>CRITICAL:</strong> Many companies have duplicate rows in the database.<br>
+                    → Use the <strong style="color:#f87171">"DEL ALL"</strong> button (not just ✕) to remove a company completely.
                 </div>
 
                 <div class="mb-4 text-sm text-amber-400">
@@ -532,8 +536,8 @@
                                 ✕
                             </button>
                             <button onclick="deleteAllDuplicatesByName('${company.name.replace(/'/g, "\\'")}')" 
-                                    class="text-[9px] px-1.5 py-0 text-red-400 hover:text-red-300 border border-red-800 rounded" title="Delete ALL rows with this exact company name (use this for duplicates)">
-                                all
+                                    class="text-[10px] px-2 py-px bg-red-900 text-red-200 hover:bg-red-800 rounded font-medium" title="Delete ALL rows with this exact company name — recommended when duplicates exist">
+                                DEL ALL
                             </button>
                         </div>
                     </td>
@@ -1285,18 +1289,18 @@
 
                 if (remaining.length > 0) {
                     const cleanAll = confirm(
-                        `Row ID ${id} deleted.\n\n` +
-                        `There are still ${remaining.length} row(s) with the name "${name}".\n\n` +
-                        `Would you like to delete ALL remaining rows with this exact name now?`
+                        `Deleted one row (ID ${id}).\n\n` +
+                        `There are STILL ${remaining.length} row(s) with the name "${name}" in the database.\n\n` +
+                        `Click OK to DELETE ALL of them right now (recommended).`
                     );
 
                     if (cleanAll) {
                         await deleteAllDuplicatesByName(name);
                     } else {
-                        alert(`One row deleted. ${remaining.length} duplicate(s) with the name "${name}" still exist in the database.`);
+                        alert(`Only one row was deleted. ${remaining.length} duplicate(s) with the name "${name}" still exist.`);
                     }
                 } else {
-                    alert(`"${name || ticker}" has been completely removed from the database.`);
+                    alert(`"${name || ticker}" has been fully removed (no duplicates remain).`);
                 }
 
             } catch (err) {
@@ -1333,6 +1337,14 @@
                 alert('Bulk delete failed: ' + err.message);
                 console.error(err);
             }
+        }
+
+        function promptDeleteAllDuplicates() {
+            const companyName = prompt("Enter the EXACT company name you want to completely remove (all duplicates):");
+
+            if (!companyName || !companyName.trim()) return;
+
+            deleteAllDuplicatesByName(companyName.trim());
         }
 
         function showAddCompanyModal() {
