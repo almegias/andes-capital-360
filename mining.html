@@ -217,6 +217,11 @@
             </div>
 
             <div class="p-6 overflow-auto flex-1">
+                <div class="mb-4 p-3 bg-red-900/30 border border-red-700 rounded-2xl text-sm text-red-300">
+                    <strong>Important:</strong> If a company still appears after using the ✕ button, there are duplicate rows in the database with the same name. 
+                    Use the small <strong>"all"</strong> button next to the ✕ to delete every copy of that company at once.
+                </div>
+
                 <div class="mb-4 text-sm text-amber-400">
                     <strong>Note:</strong> Beta is auto-fetched from Yahoo on Refresh. Insider Ownership % and X/News Score (1-10) are manual for now. Jurisdiction risk is now more comprehensive.
                     <br><span class="text-xs text-zinc-500">Tip: Open DevTools Console (F12) when using this admin tool — it logs useful information about deletes and data refreshes.</span>
@@ -415,6 +420,7 @@
                     refreshBtn.innerHTML = originalText || '<i class="fa-solid fa-sync"></i> <span>Refresh from DB</span>';
                     refreshBtn.disabled = false;
                 }
+                alert('Data has been fully reloaded from the database. The tables below should now be up to date.');
             }
         }
 
@@ -520,10 +526,16 @@
                     </td>
                     
                     <td class="py-2.5 text-center">
-                        <button onclick="deleteFromAdmin(${company.id}, '${company.ticker}', '${company.name.replace(/'/g, "\\'")}')" 
-                                class="text-red-400 hover:text-red-600 px-2 text-lg leading-none" title="Delete permanently from database">
-                            ✕
-                        </button>
+                        <div class="flex flex-col items-center gap-y-0.5">
+                            <button onclick="deleteFromAdmin(${company.id}, '${company.ticker}', '${company.name.replace(/'/g, "\\'")}')" 
+                                    class="text-red-400 hover:text-red-600 px-2 text-lg leading-none" title="Delete this specific row only">
+                                ✕
+                            </button>
+                            <button onclick="deleteAllDuplicatesByName('${company.name.replace(/'/g, "\\'")}')" 
+                                    class="text-[9px] px-1.5 py-0 text-red-400 hover:text-red-300 border border-red-800 rounded" title="Delete ALL rows with this exact company name (use this for duplicates)">
+                                all
+                            </button>
+                        </div>
                     </td>
                 `;
                 tbody.appendChild(row);
