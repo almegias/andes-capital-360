@@ -59,6 +59,20 @@ create index if not exists idx_companies_name on public.companies (name);
 create index if not exists idx_watchlists_user on public.watchlists (user_id);
 
 -- =====================================================
+-- SCORE ALGORITHM SUPPORT (Run these ALTER statements)
+-- =====================================================
+
+-- Add columns needed for the new weighted scoring system
+alter table public.companies
+  add column if not exists beta numeric,
+  add column if not exists insider_ownership_pct numeric,
+  add column if not exists x_sentiment_score numeric,
+  add column if not exists score_breakdown jsonb;
+
+-- Optional: change overall_score to support decimals (if it was integer)
+-- alter table public.companies alter column overall_score type numeric;
+
+-- =====================================================
 -- Done! After running this, go to Table Editor in Supabase
 -- and you should see both tables.
 -- =====================================================

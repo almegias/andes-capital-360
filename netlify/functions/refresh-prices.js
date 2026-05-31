@@ -104,7 +104,8 @@ async function fetchCompanyInfo(ticker) {
     return {
       marketCap: quote.marketCap ?? null,
       shortName: quote.shortName || quote.longName || null,
-      longBusinessSummary: quote.longBusinessSummary || null
+      longBusinessSummary: quote.longBusinessSummary || null,
+      beta: quote.beta ?? null
     };
   } catch (e) {
     return null;
@@ -169,6 +170,7 @@ exports.handler = async (event) => {
             name: info?.shortName || data.name || null,
             description: shortDescription,
             yahoo_symbol: sym,
+            beta: info?.beta || null,
           }),
         };
       }

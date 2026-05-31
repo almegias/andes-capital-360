@@ -83,6 +83,10 @@
                     <i class="fa-solid fa-credit-card"></i> <span>Subscribe $14.99/mo</span>
                 </button>
 
+                <button onclick="showAdminScoreModal()" class="px-4 py-2 border border-zinc-600 text-zinc-300 hover:bg-zinc-800 rounded-2xl text-sm flex items-center gap-x-2">
+                    <i class="fa-solid fa-calculator"></i> <span>Admin Scores</span>
+                </button>
+
                 <a href="index.html" class="px-4 py-2 border border-zinc-700 rounded-2xl hover:bg-zinc-900 text-sm flex items-center gap-x-2">← Back to Home</a>
             </div>
         </div>
@@ -191,6 +195,53 @@
         </div>
     </div>
 
+    <!-- ADMIN SCORE CALCULATOR MODAL -->
+    <div id="admin-score-modal" onclick="if (event.target.id === 'admin-score-modal') hideAdminScoreModal()" class="hidden fixed inset-0 bg-black/80 z-[150] flex items-center justify-center p-4">
+        <div onclick="event.stopImmediatePropagation()" class="modal bg-zinc-900 border border-zinc-700 rounded-3xl w-full max-w-6xl max-h-[92vh] overflow-hidden flex flex-col">
+            <div class="px-6 py-4 border-b border-zinc-700 flex items-center justify-between bg-zinc-950">
+                <div>
+                    <div class="font-semibold text-xl">Admin • Score Algorithm</div>
+                    <div class="text-xs text-zinc-500">Weighted scoring for Mining Companies (visible only to admins)</div>
+                </div>
+                <div class="flex items-center gap-x-3">
+                    <button onclick="recalculateAllScores()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl text-sm font-medium flex items-center gap-x-2">
+                        <i class="fa-solid fa-sync"></i>
+                        <span>Recalculate All Scores</span>
+                    </button>
+                    <button onclick="hideAdminScoreModal()" class="text-xl text-zinc-400 hover:text-white px-2">×</button>
+                </div>
+            </div>
+
+            <div class="p-6 overflow-auto flex-1">
+                <div class="mb-4 text-sm text-amber-400">
+                    <strong>Note:</strong> X Mentions/News and Insider Ownership % are mostly manual for now. Beta is auto-fetched where possible.
+                </div>
+
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-xs text-zinc-400 border-b border-zinc-700">
+                            <th class="text-left py-2">Company</th>
+                            <th class="text-center py-2">Beta</th>
+                            <th class="text-right py-2">Mkt Cap</th>
+                            <th class="text-center py-2">Above 50D</th>
+                            <th class="text-center py-2">Insider %</th>
+                            <th class="text-center py-2">X Score (1-10)</th>
+                            <th class="text-center py-2">Jurisdiction</th>
+                            <th class="text-center py-2 font-semibold">Final Score</th>
+                            <th class="text-left py-2">Breakdown</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-score-tbody" class="divide-y divide-zinc-800"></tbody>
+                </table>
+            </div>
+
+            <div class="px-6 py-4 border-t border-zinc-700 bg-zinc-950 text-xs text-zinc-500 flex justify-between items-center">
+                <div>Changes to manual fields are saved immediately to Supabase.</div>
+                <button onclick="hideAdminScoreModal()" class="px-4 py-2 border border-zinc-600 rounded-2xl">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- MAIN APPLICATION SCRIPT -->
     <script>
         // ==================== SUPABASE CONFIG ====================
@@ -220,6 +271,188 @@
             if (value >= 1e9) return '$' + (value / 1e9).toFixed(1) + 'B';
             return '$' + (value / 1e6).toFixed(0) + 'M';
         }
+
+        // ==================== ADMIN SCORE TOOL ====================
+        let adminScoreModalOpen = false;
+
+        async function showAdminScoreModal() {
+            const modal = document.getElementById('admin-score-modal');
+            if (!modal) return;
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            adminScoreModalOpen = true;
+
+            await renderAdminScoreTable();
+        }
+
+        function hideAdminScoreModal() {
+            const modal = document.getElementById('admin-score-modal');
+            if (modal) {
+                modal.classList.remove('flex');
+                modal.classList.add('hidden');
+            }
+            adminScoreModalOpen = false;
+        }
+
+        async function renderAdminScoreTable() {
+            const tbody = document.getElementById('admin-score-tbody');
+            if (!tbody || !companies.length) return;
+
+            tbody.innerHTML = '';
+
+            const avgBeta = calculateAverage(companies, 'beta', 2);
+            const avgMc = calculateAverage(companies, 'market_cap', 100000000);
+
+            companies.forEach(company => {
+                const { final_score, breakdown } = calculateMiningScore(company, companies);
+
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-zinc-800/60';
+
+                row.innerHTML = `
+                    <td class="py-2.5 pr-4 font-medium">${company.name}<br><span class="font-mono text-xs text-zinc-500">${company.ticker}</span></td>
+                    
+                    <td class="py-2.5 text-center">
+                        <input type="number" step="0.1" value="${company.beta ?? ''}" 
+                               class="w-16 bg-zinc-950 border border-zinc-700 rounded px-1 py-0.5 text-sm"
+                               onchange="updateCompanyField(${company.id}, 'beta', this.value)">
+                    </td>
+                    
+                    <td class="py-2.5 text-right text-xs tabular-nums">${formatMarketCap(company.market_cap)}</td>
+                    
+                    <td class="py-2.5 text-center">
+                        <span class="${company.above_50dma ? 'text-emerald-400' : 'text-red-400'}">
+                            ${company.above_50dma ? '▲' : '▼'}
+                        </span>
+                    </td>
+                    
+                    <td class="py-2.5 text-center">
+                        <input type="number" step="1" value="${company.insider_ownership_pct ?? ''}" 
+                               class="w-16 bg-zinc-950 border border-zinc-700 rounded px-1 py-0.5 text-sm"
+                               onchange="updateCompanyField(${company.id}, 'insider_ownership_pct', this.value)">
+                    </td>
+                    
+                    <td class="py-2.5 text-center">
+                        <input type="number" step="0.5" min="1" max="10" value="${company.x_sentiment_score ?? 5}" 
+                               class="w-16 bg-zinc-950 border border-zinc-700 rounded px-1 py-0.5 text-sm"
+                               onchange="updateCompanyField(${company.id}, 'x_sentiment_score', this.value)">
+                    </td>
+                    
+                    <td class="py-2.5 text-center text-xs max-w-[140px]">${company.jurisdiction || '—'}</td>
+                    
+                    <td class="py-2.5 text-center">
+                        <span class="px-3 py-0.5 rounded-xl bg-emerald-900 text-emerald-300 font-semibold text-base">
+                            ${final_score.toFixed(1)}
+                        </span>
+                    </td>
+                    
+                    <td class="py-2.5 text-xs">
+                        <button onclick="showScoreBreakdown(${company.id})" 
+                                class="px-3 py-1 text-emerald-400 hover:text-emerald-300 border border-emerald-800 rounded-2xl text-[10px]">
+                            View Breakdown
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        async function updateCompanyField(id, field, value) {
+            const numValue = value === '' ? null : parseFloat(value);
+            try {
+                await supabaseClient
+                    .from('companies')
+                    .update({ [field]: numValue })
+                    .eq('id', id);
+
+                // Update local state
+                const company = companies.find(c => c.id === id);
+                if (company) company[field] = numValue;
+
+                // Refresh the admin table
+                await renderAdminScoreTable();
+            } catch (e) {
+                alert('Failed to save: ' + e.message);
+            }
+        }
+
+        async function recalculateAllScores() {
+            if (!confirm('Recalculate and save final scores for all companies using current data?')) return;
+
+            const btns = document.querySelectorAll('#admin-score-modal button');
+            btns.forEach(b => b.disabled = true);
+
+            let updated = 0;
+
+            for (const company of companies) {
+                const { final_score, breakdown } = calculateMiningScore(company, companies);
+
+                try {
+                    await supabaseClient
+                        .from('companies')
+                        .update({
+                            overall_score: final_score,
+                            score_breakdown: breakdown
+                        })
+                        .eq('id', company.id);
+
+                    company.overall_score = final_score;
+                    company.score_breakdown = breakdown;
+                    updated++;
+                } catch (e) {
+                    console.error('Failed to save score for', company.ticker, e);
+                }
+            }
+
+            alert(`Saved new scores for ${updated} companies.`);
+            await renderAdminScoreTable();
+            renderTable(companies); // refresh main table
+
+            btns.forEach(b => b.disabled = false);
+        }
+
+        function showScoreBreakdown(companyId) {
+            const company = companies.find(c => c.id === companyId);
+            if (!company) return;
+
+            const { breakdown } = calculateMiningScore(company, companies);
+
+            const content = `
+                <div class="font-semibold text-lg mb-3">${company.name} (${company.ticker}) — Score: ${breakdown.final_score}</div>
+                
+                <div class="grid grid-cols-1 gap-3 text-sm">
+                    <div><strong>Stock Beta</strong> (20%): ${breakdown.stock_beta.sub_score} 
+                        <span class="text-zinc-400">(value: ${breakdown.stock_beta.value}, avg: ${breakdown.stock_beta.avg})</span>
+                    </div>
+                    <div><strong>Market Cap</strong> (10%): ${breakdown.market_cap.sub_score} 
+                        <span class="text-zinc-400">(value: ${formatMarketCap(breakdown.market_cap.value)}, avg: ${formatMarketCap(breakdown.market_cap.avg)})</span>
+                    </div>
+                    <div><strong>X Mentions & News</strong> (40%): ${breakdown.x_mentions_news.sub_score} 
+                        <span class="text-zinc-400">(${breakdown.x_mentions_news.note})</span>
+                    </div>
+                    <div><strong>50-Day MA</strong> (20%): ${breakdown.moving_average_50d.sub_score} 
+                        <span class="text-zinc-400">(Above 50DMA: ${breakdown.moving_average_50d.above_50dma})</span>
+                    </div>
+                    <div><strong>Insider Ownership</strong> (10%): ${breakdown.insider_ownership.sub_score} 
+                        <span class="text-zinc-400">(value: ${breakdown.insider_ownership.value}%, avg: ${breakdown.insider_ownership.avg}%)</span>
+                    </div>
+                    <div class="pt-2 border-t border-zinc-700">
+                        <strong>Jurisdiction Risk:</strong> ${breakdown.jurisdiction_risk.penalty} 
+                        <span class="text-zinc-400">(${breakdown.jurisdiction_risk.jurisdictions})</span>
+                    </div>
+                </div>
+            `;
+
+            // Simple alert for now — we can make this a nicer modal later
+            const w = window.open('', '_blank', 'width=520,height=420');
+            w.document.write(`
+                <html><head><title>Score Breakdown - ${company.ticker}</title>
+                <style>body { font-family: system-ui; background:#111; color:#ddd; padding:20px; line-height:1.5; }</style>
+                </head><body>${content}</body></html>
+            `);
+        }
+
 
         // ==================== DATA LOADING ====================
         async function loadCompaniesFromSupabase() {
@@ -253,6 +486,79 @@
             }
         }
 
+        // ==================== SCORING ALGORITHM ====================
+        function calculateAverage(list, field, defaultValue = 0) {
+            const vals = list.map(c => c[field]).filter(v => v != null && !isNaN(v));
+            if (vals.length === 0) return defaultValue;
+            return vals.reduce((a, b) => a + b, 0) / vals.length;
+        }
+
+        function calculateMiningScore(company, allCompanies) {
+            const avgBeta = calculateAverage(allCompanies, 'beta', 2);
+            const avgMarketCap = calculateAverage(allCompanies, 'market_cap', 100000000); // 100M default
+            const avgInsider = calculateAverage(allCompanies, 'insider_ownership_pct', 15);
+
+            // 1. Stock Beta Sub-score (weight 2/10)
+            let betaSub = 5.0;
+            const beta = (company.beta != null && !isNaN(company.beta)) ? company.beta : 2;
+            if (avgBeta > 0.1) {
+                const z = (beta - avgBeta) / Math.max(0.5, avgBeta * 0.6);
+                betaSub = Math.min(10, Math.max(1, 5 + z * 3.5));
+            }
+
+            // 2. Market Cap Sub-score (weight 1/10)
+            let mcSub = 5.0;
+            const mc = company.market_cap || 0;
+            if (avgMarketCap > 0) {
+                const ratio = mc / avgMarketCap;
+                mcSub = Math.min(10, Math.max(1, 5 + (ratio - 1) * 3.5));
+            }
+
+            // 3. X.com Mentions/News Sub-score (weight 4/10) — manual for now
+            let xSub = (company.x_sentiment_score != null) ? company.x_sentiment_score : 5.0;
+
+            // 4. 50-Day Moving Average Sub-score (weight 2/10)
+            let maSub = 5.0;
+            if (company.above_50dma === true) {
+                maSub = 7.5;
+            } else if (company.above_50dma === false) {
+                maSub = 3.0;
+            }
+
+            // 5. Insider Ownership Sub-score (weight 1/10)
+            let insiderSub = 5.0;
+            const insider = company.insider_ownership_pct || 0;
+            if (avgInsider > 0) {
+                const ratio = insider / avgInsider;
+                insiderSub = Math.min(10, Math.max(1, 5 + (ratio - 1) * 3));
+            }
+            if (insider < 15) insiderSub = Math.max(1, insiderSub - 1);
+
+            // Weighted average
+            let raw = (betaSub * 0.2) + (mcSub * 0.1) + (xSub * 0.4) + (maSub * 0.2) + (insiderSub * 0.1);
+
+            // Jurisdiction Risk penalty
+            const jurisLower = (company.jurisdiction || '').toLowerCase();
+            const risky = ['africa', 'russia', 'nicaragua', 'iran', 'iraq', 'syria', 'sudan', 'yemen', 'libya', 'middle east'];
+            const jurisdictionPenalty = risky.some(r => jurisLower.includes(r)) ? -1 : 0;
+
+            raw += jurisdictionPenalty;
+
+            const finalScore = Math.min(10, Math.max(1, Math.round(raw * 10) / 10));
+
+            const breakdown = {
+                stock_beta: { sub_score: Number(betaSub.toFixed(1)), value: beta, avg: Number(avgBeta.toFixed(1)), weight: 0.2 },
+                market_cap: { sub_score: Number(mcSub.toFixed(1)), value: mc, avg: Math.round(avgMarketCap), weight: 0.1 },
+                x_mentions_news: { sub_score: Number(xSub.toFixed(1)), value: xSub, note: "Manual input (1-10)", weight: 0.4 },
+                moving_average_50d: { sub_score: Number(maSub.toFixed(1)), above_50dma: company.above_50dma, weight: 0.2 },
+                insider_ownership: { sub_score: Number(insiderSub.toFixed(1)), value: insider, avg: Number(avgInsider.toFixed(1)), weight: 0.1 },
+                jurisdiction_risk: { penalty: jurisdictionPenalty, jurisdictions: company.jurisdiction || 'N/A' },
+                final_score: finalScore
+            };
+
+            return { final_score: finalScore, breakdown };
+        }
+
         // ==================== RENDERING ====================
         function renderTable(data) {
             const tbody = document.getElementById('table-body');
@@ -283,7 +589,11 @@
                     <td class="py-2.5 w-24"><span class="data-badge px-2 py-px rounded-2xl ${typeClass}">${c.type}</span></td>
                     <td class="py-2.5 text-zinc-300 w-24">${c.category}</td>
                     <td class="py-2.5 text-center w-28"><span class="px-2 py-px text-[10px] rounded-xl bg-zinc-800 text-zinc-300">${juris}</span></td>
-                    <td class="py-2.5 text-center w-16"><span class="data-badge px-2 py-px rounded-2xl font-semibold bg-emerald-900 text-emerald-300"><span class="text-[10px]">Premium</span></span></td>
+                    <td class="py-2.5 text-center w-16">
+                        <span class="data-badge px-2.5 py-px rounded-2xl font-semibold bg-emerald-900 text-emerald-300 text-sm">
+                            ${c.overall_score ? Number(c.overall_score).toFixed(1) : '—'}
+                        </span>
+                    </td>
                     <td class="py-2.5 text-right pr-3 w-20">$${c.current_price ? c.current_price.toFixed(2) : '—'}</td>
                     <td class="py-2.5 pl-2 pr-1 text-xs text-zinc-400">
                         ${c.comment || ''} <span class="text-amber-400/70 text-[10px]">(detailed thesis for premium users)</span>
