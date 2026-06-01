@@ -32,28 +32,25 @@
         <div class="max-w-screen-2xl mx-auto px-6 py-4 flex items-center justify-between">
             <div class="flex items-center gap-x-3">
                 <div class="flex items-center gap-x-3">
+                    <!-- Logo: Sun over snowy mountains (same as landing page) -->
                     <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <rect width="40" height="40" rx="6" fill="#1e3a5f"/>
-                        <polygon points="0,32 6,18 12,26 18,12 24,24 30,10 36,20 40,28 40,40 0,40" fill="#475569"/>
-                        <polygon points="0,36 5,24 11,30 17,17 23,28 29,15 35,25 40,32 40,40 0,40" fill="#64748b"/>
-                        <polygon points="6,18 9,22 12,18 12,26 9,23 6,26" fill="#f1f5f9"/>
-                        <polygon points="18,12 21,17 24,12 24,24 21,20 18,24" fill="#f1f5f9"/>
-                        <polygon points="30,10 33,15 36,10 36,20" fill="#e0f2fe"/>
-                        <rect x="0" y="33" width="40" height="7" fill="#3f2a1d"/>
-                        <g stroke="#166534" stroke-width="1.3">
-                            <line x1="1" y1="34.5" x2="39" y2="34.5"/>
-                            <line x1="1" y1="36.5" x2="39" y2="36.5"/>
-                            <line x1="1" y1="38.5" x2="39" y2="38.5"/>
+                        <!-- Snowy mountains -->
+                        <polygon points="4,32 14,14 24,32" fill="#e2e8f0"/>
+                        <polygon points="16,32 26,12 36,32" fill="#cbd5e1"/>
+                        <polygon points="8,32 15,20 22,32" fill="#f1f5f9"/>
+                        <!-- Sun -->
+                        <circle cx="30" cy="12" r="5" fill="#fbbf24"/>
+                        <g stroke="#fbbf24" stroke-width="1.2" stroke-linecap="round">
+                            <line x1="30" y1="4" x2="30" y2="2"/>
+                            <line x1="36" y1="6" x2="37.5" y2="4.5"/>
+                            <line x1="38" y1="12" x2="40" y2="12"/>
+                            <line x1="36" y1="18" x2="37.5" y2="19.5"/>
+                            <line x1="30" y1="20" x2="30" y2="22"/>
+                            <line x1="24" y1="18" x2="22.5" y2="19.5"/>
+                            <line x1="22" y1="12" x2="20" y2="12"/>
+                            <line x1="24" y1="6" x2="22.5" y2="4.5"/>
                         </g>
-                        <g stroke="#4ade80" stroke-width="0.7">
-                            <circle cx="5" cy="35" r="1.4"/>
-                            <circle cx="12" cy="37" r="1.4"/>
-                            <circle cx="19" cy="35" r="1.4"/>
-                            <circle cx="26" cy="37" r="1.4"/>
-                            <circle cx="33" cy="35" r="1.4"/>
-                        </g>
-                        <circle cx="6.5" cy="35.2" r="0.7" fill="#f59e0b"/>
-                        <circle cx="20.5" cy="35.2" r="0.7" fill="#f59e0b"/>
                     </svg>
                     <div>
                         <span class="font-display text-3xl font-semibold tracking-tighter">Andes Capital</span>
@@ -208,7 +205,7 @@
                         <i class="fa-solid fa-sync"></i>
                         <span>Refresh from DB</span>
                     </button>
-                    <button onclick="promptDeleteAllDuplicates()" class="px-4 py-2 bg-red-800 hover:bg-red-700 text-white rounded-2xl text-sm flex items-center gap-x-2" title="Delete every row with a specific company name (use this to clean duplicates)">
+                    <button onclick="promptDeleteAllDuplicates()" class="px-4 py-2 bg-red-700 hover:bg-red-600 text-white rounded-2xl text-sm font-semibold flex items-center gap-x-2" title="Type a company name to delete every single copy of it">
                         <i class="fa-solid fa-trash"></i>
                         <span>Clean Duplicates by Name</span>
                     </button>
@@ -221,9 +218,9 @@
             </div>
 
             <div class="p-6 overflow-auto flex-1">
-                <div class="mb-4 p-3 bg-red-900/40 border border-red-700 rounded-2xl text-sm text-red-200">
-                    <strong>CRITICAL:</strong> Many companies have duplicate rows in the database.<br>
-                    → Use the <strong style="color:#f87171">"DEL ALL"</strong> button (not just ✕) to remove a company completely.
+                <div class="mb-4 p-3 bg-red-900/50 border border-red-600 rounded-2xl text-sm text-red-200">
+                    <strong>DUPLICATE PROBLEM DETECTED</strong><br>
+                    If you see red "⚠ X copies" badges below, use the big red <strong>"DEL ALL"</strong> button (or the top "Clean Duplicates by Name" button) to remove the company completely.
                 </div>
 
                 <div class="mb-4 text-sm text-amber-400">
@@ -456,15 +453,26 @@
             const avgBeta = calculateAverage(companies, 'beta', 2);
             const avgMc = calculateAverage(companies, 'market_cap', 100000000);
 
+            // Build a map of name -> count to detect duplicates
+            const nameCounts = {};
+            companies.forEach(c => {
+                nameCounts[c.name] = (nameCounts[c.name] || 0) + 1;
+            });
+
             companies.forEach(company => {
                 const { final_score, breakdown } = calculateMiningScore(company, companies);
                 const riskBadge = getJurisdictionRiskBadge(company.jurisdiction);
+                const isDuplicate = nameCounts[company.name] > 1;
 
                 const row = document.createElement('tr');
                 row.className = 'hover:bg-zinc-800/60';
 
                 row.innerHTML = `
-                    <td class="py-2.5 pr-4 font-medium">${company.name}<br><span class="font-mono text-xs text-zinc-500">${company.ticker}</span></td>
+                    <td class="py-2.5 pr-4 font-medium">
+                        ${company.name}
+                        ${isDuplicate ? `<span class="ml-1 text-xs bg-red-800 text-red-200 px-1.5 py-px rounded">⚠ ${nameCounts[company.name]} copies</span>` : ''}
+                        <br><span class="font-mono text-xs text-zinc-500">${company.ticker}</span>
+                    </td>
                     
                     <td class="py-2.5 text-center">
                         <input type="number" step="0.1" value="${company.beta ?? ''}" 
@@ -531,13 +539,17 @@
                     
                     <td class="py-2.5 text-center">
                         <div class="flex flex-col items-center gap-y-0.5">
-                            <button onclick="deleteFromAdmin(${company.id}, '${company.ticker}', '${company.name.replace(/'/g, "\\'")}')" 
-                                    class="text-red-400 hover:text-red-600 px-2 text-lg leading-none" title="Delete this specific row only">
+                            <button onclick="deleteCompanyLocal(${company.id})" 
+                                    class="text-red-400 hover:text-red-600 px-2 text-lg leading-none" title="Remove from current view (matches Stocks/Crypto behavior)">
                                 ✕
                             </button>
                             <button onclick="deleteAllDuplicatesByName('${company.name.replace(/'/g, "\\'")}')" 
-                                    class="text-[10px] px-2 py-px bg-red-900 text-red-200 hover:bg-red-800 rounded font-medium" title="Delete ALL rows with this exact company name — recommended when duplicates exist">
+                                    class="text-[10px] px-2 py-0.5 bg-red-700 text-white hover:bg-red-600 rounded font-semibold" title="Delete EVERY copy of this company (recommended)">
                                 DEL ALL
+                            </button>
+                            <button onclick="showExactNameAndIds(${company.id})" 
+                                    class="text-[9px] px-1 py-0 text-zinc-400 hover:text-white" title="Show the exact stored name and all IDs for this company (helps diagnose mismatches)">
+                                i
                             </button>
                         </div>
                     </td>
@@ -978,7 +990,7 @@
                     </td>
                     <td class="py-2.5 pr-4 text-right flex items-center justify-end gap-x-2 w-8">
                         <button onclick="showDetail(${c.id})" class="text-xs px-3 py-1 border border-zinc-600 rounded-2xl hover:bg-zinc-800">Details</button>
-                        <button onclick="deleteCompany(${c.id}, '${c.ticker}', '${c.name}'); event.stopImmediatePropagation();" class="text-red-400 hover:text-red-600 text-xs px-1">✕</button>
+                        <button onclick="deleteCompanyLocal(${c.id}); event.stopImmediatePropagation();" class="text-red-400 hover:text-red-600 text-xs px-1">✕</button>
                     </td>
                 `;
                 tbody.appendChild(row);
@@ -1217,6 +1229,14 @@
             if (c) alert(`${c.name}\n\n${c.comment || 'No thesis yet.'}`);
         }
 
+        // Simple local-only delete (matches the behavior on Stocks and Crypto pages)
+        function deleteCompanyLocal(id) {
+            if (!confirm(`Delete this company from the current view?`)) return;
+            companies = companies.filter(c => c.id !== id);
+            renderTable(companies);
+        }
+
+        // Supabase-backed delete (kept for Admin use / real DB cleanup)
         async function deleteCompany(id, ticker, name) {
             if (!confirm(`Permanently delete ${name || ticker} from the database?\n\nThis action cannot be undone.`)) return;
 
@@ -1224,7 +1244,6 @@
                 const { error } = await supabaseClient.from('companies').delete().eq('id', id);
                 if (error) throw error;
 
-                // Always do a full fresh fetch from Supabase after delete
                 const { data, error: fetchError } = await supabaseClient
                     .from('companies')
                     .select('*')
@@ -1233,11 +1252,8 @@
                 if (fetchError) throw fetchError;
 
                 companies = data || [];
-
-                // Refresh main table
                 renderTable(companies);
 
-                // Refresh admin table if open
                 if (adminScoreModalOpen) {
                     await renderAdminScoreTable();
                 }
@@ -1309,8 +1325,61 @@
             }
         }
 
+        async function showExactNameAndIds(companyId) {
+            const company = companies.find(c => c.id === companyId);
+            if (!company) return;
+
+            const name = company.name;
+
+            const { data: allMatches, error } = await supabaseClient
+                .from('companies')
+                .select('id, name, ticker, created_at')
+                .eq('name', name);
+
+            if (error) {
+                alert('Failed to fetch matching rows: ' + error.message);
+                return;
+            }
+
+            console.log('%c[Duplicate Inspector] Exact name in DB:', 'color:#60a5fa', `"${name}"`);
+            console.log('%c[Duplicate Inspector] All rows with this exact name:', 'color:#60a5fa', allMatches);
+
+            const ids = allMatches.map(r => r.id).join(', ');
+            alert(
+                `Exact name stored in database:\n"${name}"\n\n` +
+                `Number of rows with this exact name: ${allMatches.length}\n\n` +
+                `IDs: ${ids}\n\n` +
+                `(See DevTools Console for full details)`
+            );
+        }
+
         async function deleteAllDuplicatesByName(companyName) {
-            if (!confirm(`This will delete EVERY row where name = "${companyName}".\nThis cannot be undone. Continue?`)) {
+            const trimmedName = companyName.trim();
+
+            console.log('%c[Admin Bulk Delete] Looking for rows with exact name:', 'color:#f87171', `"${trimmedName}"`);
+
+            // First, count and list what will be deleted
+            const { data: matchingRows, error: countError } = await supabaseClient
+                .from('companies')
+                .select('id, name, ticker')
+                .eq('name', trimmedName);
+
+            if (countError) {
+                alert('Failed to check duplicates: ' + countError.message);
+                return;
+            }
+
+            console.log('%c[Admin Bulk Delete] Found rows to delete:', 'color:orange', matchingRows);
+
+            if (!matchingRows || matchingRows.length === 0) {
+                alert(`No rows found with the exact name "${trimmedName}".\nCheck for extra spaces or different spelling.`);
+                return;
+            }
+
+            const idsToDelete = matchingRows.map(r => r.id);
+            console.log('%c[Admin Bulk Delete] IDs that will be deleted:', 'color:#f87171', idsToDelete);
+
+            if (!confirm(`This will delete ${matchingRows.length} row(s) with the exact name "${trimmedName}".\n\nIDs: ${idsToDelete.join(', ')}\n\nContinue?`)) {
                 return;
             }
 
@@ -1318,9 +1387,11 @@
                 const { error } = await supabaseClient
                     .from('companies')
                     .delete()
-                    .eq('name', companyName);
+                    .eq('name', trimmedName);
 
                 if (error) throw error;
+
+                console.log('%c[Admin Bulk Delete] Bulk delete succeeded for name:', 'color:#4ade80', trimmedName);
 
                 const { data: freshData } = await supabaseClient
                     .from('companies')
@@ -1331,7 +1402,7 @@
                 renderTable(companies);
                 await renderAdminScoreTable();
 
-                alert(`All rows named "${companyName}" have been deleted.`);
+                alert(`Successfully deleted ${matchingRows.length} row(s) with the name "${trimmedName}".`);
 
             } catch (err) {
                 alert('Bulk delete failed: ' + err.message);
@@ -1340,11 +1411,21 @@
         }
 
         function promptDeleteAllDuplicates() {
-            const companyName = prompt("Enter the EXACT company name you want to completely remove (all duplicates):");
+            const companyName = prompt("Enter the EXACT company name (copy-paste from the table if possible) to delete ALL copies of:");
 
             if (!companyName || !companyName.trim()) return;
 
-            deleteAllDuplicatesByName(companyName.trim());
+            const trimmed = companyName.trim();
+            const count = companies.filter(c => c.name === trimmed).length;
+
+            if (count === 0) {
+                alert(`No companies found with the exact name "${trimmed}".`);
+                return;
+            }
+
+            if (confirm(`This will delete all ${count} rows with the exact name "${trimmed}".\n\nContinue?`)) {
+                deleteAllDuplicatesByName(trimmed);
+            }
         }
 
         function showAddCompanyModal() {
