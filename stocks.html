@@ -64,6 +64,10 @@
                     <i class="fa-solid fa-star text-amber-400"></i> <span>Watchlist</span>
                 </button>
 
+                <button onclick="showAdminScoreModal()" class="px-4 py-2 border border-zinc-600 text-zinc-300 hover:bg-zinc-800 rounded-2xl text-sm flex items-center gap-x-2">
+                    <i class="fa-solid fa-calculator"></i> <span>Admin Scores</span>
+                </button>
+
                 <a href="index.html" 
                    class="px-4 py-2 border border-zinc-700 rounded-2xl hover:bg-zinc-900 flex items-center gap-x-2 text-sm">
                     ← Back to Home
@@ -226,15 +230,8 @@
                 const saved = localStorage.getItem(STORAGE_KEY);
                 if (saved) {
                     const parsed = JSON.parse(saved);
-                    // Merge saved prices into current data structure
-                    parsed.forEach(savedItem => {
-                        const match = data.find(d => d.ticker === savedItem.ticker);
-                        if (match) {
-                            match.price = savedItem.price;
-                            match.market_cap = savedItem.market_cap;
-                            if (savedItem.name) match.name = savedItem.name;
-                        }
-                    });
+                    // Use the saved list as the data (to make deletes permanent)
+                    data = parsed;
                     // Ensure sorted
                     data.sort((a, b) => a.name.localeCompare(b.name));
                     return true;
@@ -441,6 +438,128 @@
             }
 
             data.push(newItem);
+
+        // ADMIN STOCKS
+        let currentEditingStockTicker = null;
+
+        function showAdminScoreModal() {
+            const modal = document.getElementById('admin-score-modal');
+            if (modal) modal.style.display = 'flex';
+            renderAdminStockScoreTable();
+        }
+
+        function hideAdminScoreModal() {
+            const modal = document.getElementById('admin-score-modal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function renderAdminStockScoreTable() {
+            const tbody = document.getElementById('admin-score-tbody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            data.forEach(item => {
+                const scoreData = calculateStockScore(item, data);
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-zinc-800/60';
+                row.innerHTML = `
+                    <td class="py-2.5 pr-4 font-mono text-xs">${item.ticker}</td>
+                    <td class="py-2.5 pr-4 font-medium">${item.name}</td>
+                    <td class="py-2.5 text-center"><input type="number" step="0.1" value="${item.beta ?? ''}" class="w-16 bg-zinc-950 border border-zinc-700 rounded px-1 py-0.5 text-sm" onchange="updateStockField('${item.ticker}', 'beta', this.value)"></td>
+                    <td class="py-2.5 text-right text-xs tabular-nums">${formatMarketCap(item.market_cap)}</td>
+                    <td class="py-2.5 text-center"><span class="${item.above_50dma ? 'text-emerald-400' : 'text-red-400'}">${item.above_50dma ? '▲' : '▼'}</span></td>
+                    <td class="py-2.5 text-center"><input type="number" step="0.5" value="${item.llm_news_score ?? 5}" class="w-16 bg-zinc-950 border border-zinc-700 rounded px-1 py-0.5 text-sm" onchange="updateStockField('${item.ticker}', 'llm_news_score', this.value)"><button onclick="runLLMForStock('${item.ticker}', '${item.name.replace(/'/g, "\\'")}')" class="text-[10px] px-1 border border-amber-700 text-amber-400 rounded ml-1">LLM</button></td>
+                    <td class="py-2.5 text-center"><button onclick="showThesisEditorForStock('${item.ticker}')" class="text-[10px] px-2 py-1 border ${item.llm_thesis ? 'border-emerald-700 text-emerald-400' : 'border-zinc-600 text-zinc-400'} hover:bg-zinc-800 rounded">${item.llm_thesis ? 'Edit' : 'Add'}</button></td>
+                    <td class="py-2.5 text-center"><span class="px-2 py-0.5 rounded bg-emerald-900 text-emerald-300 font-semibold">${scoreData.final_score.toFixed(1)}</span></td>
+                    <td class="py-2.5 text-xs"><button onclick="showStockScoreBreakdown('${item.ticker}')" class="px-2 py-1 text-emerald-400 border border-emerald-800 rounded text-[10px]">Break</button></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function calculateStockScore(item, allItems) {
+            const avgBeta = allItems.reduce((s, d) => s + (d.beta || 1), 0) / allItems.length;
+            const avgMc = allItems.reduce((s, d) => s + (d.market_cap || 1e9), 0) / allItems.length;
+            let betaSub = 5 + ((item.beta || 1) - avgBeta) * 2;
+            let mcSub = 5 + ((item.market_cap || 0) / avgMc - 1) * 3;
+            let maSub = item.above_50dma ? 7.5 : 3;
+            let llmSub = item.llm_news_score || 5;
+            let raw = betaSub * 0.2 + mcSub * 0.1 + maSub * 0.2 + llmSub * 0.5;
+            return { final_score: Math.min(10, Math.max(1, Math.round(raw * 10) / 10)), breakdown: { stock_beta: { sub_score: betaSub.toFixed(1) }, market_cap: { sub_score: mcSub.toFixed(1) }, moving_average_50d: { sub_score: maSub.toFixed(1) }, llm_sentiment: { sub_score: llmSub.toFixed(1) } } };
+        }
+
+        async function runLLMForStock(ticker, name) {
+            try {
+                const prompt = `Based on available news and sentiment, is ${name} a viable investment for an investor or speculator looking for asymmetric risk/reward opportunities? Consider pros and cons and make a final recommendation and assign a score to the company from 1 to 10, with 10 being the best.`;
+                const res = await fetch(`/.netlify/functions/analyze-company-llm?name=${encodeURIComponent(name)}&ticker=${ticker}&prompt=${encodeURIComponent(prompt)}`);
+                const data = await res.json();
+                const llm = data.llm || {};
+                const score = llm.score || 5;
+                const thesis = `${llm.summary || ''}\n\n**Pros:**\n${(llm.pros || []).map(p => `- ${p}`).join('\n')}\n\n**Cons:**\n${(llm.cons || []).map(c => `- ${c}`).join('\n')}\n\n**Recommendation:** ${llm.recommendation || ''}`;
+                const item = data.find(d => d.ticker === ticker);
+                if (item) {
+                    item.llm_news_score = score;
+                    item.llm_thesis = thesis;
+                }
+                saveToLocalStorage();
+                renderAdminStockScoreTable();
+                setTimeout(() => showThesisEditorForStock(ticker), 200);
+            } catch (e) { alert('LLM error: ' + e.message); }
+        }
+
+        function updateStockField(ticker, field, value) {
+            const item = data.find(d => d.ticker === ticker);
+            if (item) {
+                item[field] = parseFloat(value) || null;
+                saveToLocalStorage();
+                renderAdminStockScoreTable();
+            }
+        }
+
+        function showThesisEditorForStock(ticker) {
+            const item = data.find(d => d.ticker === ticker);
+            if (!item) return;
+            currentEditingStockTicker = ticker;
+            document.getElementById('thesis-editor-company-name').textContent = `${item.name} (${ticker})`;
+            document.getElementById('thesis-public-teaser').value = item.public_teaser || '';
+            document.getElementById('thesis-full-content').value = item.llm_thesis || '';
+            document.getElementById('thesis-editor-modal').style.display = 'flex';
+        }
+
+        function hideThesisEditor() {
+            document.getElementById('thesis-editor-modal').style.display = 'none';
+        }
+
+        function saveThesis() {
+            if (!currentEditingStockTicker) return;
+            const item = data.find(d => d.ticker === currentEditingStockTicker);
+            if (item) {
+                item.public_teaser = document.getElementById('thesis-public-teaser').value.trim();
+                item.llm_thesis = document.getElementById('thesis-full-content').value.trim();
+            }
+            saveToLocalStorage();
+            hideThesisEditor();
+            renderAdminStockScoreTable();
+            renderTable();
+        }
+
+        function clearThesisContent() {
+            if (!confirm('Clear?')) return;
+            document.getElementById('thesis-public-teaser').value = '';
+            document.getElementById('thesis-full-content').value = '';
+        }
+
+        function showStockScoreBreakdown(ticker) {
+            const item = data.find(d => d.ticker === ticker);
+            if (!item) return;
+            const s = calculateStockScore(item, data);
+            alert(`${item.name} Score: ${s.final_score}\n` + JSON.stringify(s.breakdown, null, 2));
+        }
+
+        async function recalculateAllStockScores() {
+            renderAdminStockScoreTable();
+            renderTable();
+            alert('Recalculated.');
+        }
             // Sort alphabetically by name
             data.sort((a, b) => a.name.localeCompare(b.name));
 
@@ -449,5 +568,87 @@
             hideAddStockModal();
         }
     </script>
+
+    <!-- ADMIN SCORE MODAL FOR STOCKS -->
+    <div id="admin-score-modal" onclick="if (event.target.id === 'admin-score-modal') hideAdminScoreModal()" class="hidden fixed inset-0 bg-black/80 z-[150] flex items-center justify-center p-4">
+        <div onclick="event.stopImmediatePropagation()" class="modal bg-zinc-900 border border-zinc-700 rounded-3xl w-full max-w-6xl max-h-[92vh] overflow-hidden flex flex-col">
+            <div class="px-6 py-4 border-b border-zinc-700 flex items-center justify-between bg-zinc-950">
+                <div>
+                    <div class="font-semibold text-xl">Admin • Score Algorithm (Other Stocks)</div>
+                    <div class="text-xs text-zinc-500">Weighted scoring for Other Stocks (visible only to admins)</div>
+                </div>
+                <div class="flex items-center gap-x-3">
+                    <button onclick="recalculateAllStockScores()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl text-sm font-medium flex items-center gap-x-2">
+                        <i class="fa-solid fa-calculator"></i>
+                        <span>Recalculate All Scores</span>
+                    </button>
+                    <button onclick="hideAdminScoreModal()" class="text-xl text-zinc-400 hover:text-white px-2">×</button>
+                </div>
+            </div>
+
+            <div class="p-6 overflow-auto flex-1">
+                <div class="mb-4 text-sm text-amber-400">
+                    <strong>Note:</strong> Scores are calculated client-side using the defined algorithm. LLM is used for thesis.
+                </div>
+
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-xs text-zinc-400 border-b border-zinc-700">
+                            <th class="text-left py-2">Ticker</th>
+                            <th class="text-left py-2">Name</th>
+                            <th class="text-center py-2">Beta</th>
+                            <th class="text-right py-2">Mkt Cap</th>
+                            <th class="text-center py-2">Above 50D</th>
+                            <th class="text-center py-2">LLM Score</th>
+                            <th class="text-center py-2">LLM Thesis</th>
+                            <th class="text-center py-2 font-semibold">Final Score</th>
+                            <th class="text-left py-2">Breakdown</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-score-tbody" class="divide-y divide-zinc-800"></tbody>
+                </table>
+            </div>
+
+            <div class="px-6 py-4 border-t border-zinc-700 bg-zinc-950 text-xs text-zinc-500 flex justify-between items-center">
+                <div>Changes to LLM fields are saved to localStorage.</div>
+                <button onclick="hideAdminScoreModal()" class="px-4 py-2 border border-zinc-600 rounded-2xl">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- THESIS EDITOR FOR STOCKS -->
+    <div id="thesis-editor-modal" onclick="if (event.target.id === 'thesis-editor-modal') hideThesisEditor()" class="hidden fixed inset-0 bg-black/80 z-[160] flex items-center justify-center p-4">
+        <div onclick="event.stopImmediatePropagation()" class="modal bg-zinc-900 border border-zinc-700 rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+            <div class="px-6 py-4 border-b border-zinc-700 flex items-center justify-between bg-zinc-950">
+                <div>
+                    <div class="font-semibold text-xl">Edit Investment Thesis</div>
+                    <div id="thesis-editor-company-name" class="text-sm text-zinc-400"></div>
+                </div>
+                <button onclick="hideThesisEditor()" class="text-2xl text-zinc-400 hover:text-white leading-none">×</button>
+            </div>
+
+            <div class="p-6 overflow-auto flex-1 space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-zinc-300 mb-1.5">Public Teaser <span class="text-zinc-500 text-xs">(shown to everyone)</span></label>
+                    <textarea id="thesis-public-teaser" rows="3" class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400 resize-y"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-zinc-300 mb-1.5">Investment Thesis <span class="text-zinc-500 text-xs">(full - for premium)</span></label>
+                    <textarea id="thesis-full-content" rows="14" class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-amber-400 resize-y font-mono"></textarea>
+                </div>
+            </div>
+
+            <div class="px-6 py-4 border-t border-zinc-700 bg-zinc-950 flex items-center justify-between">
+                <button onclick="clearThesisContent()" class="px-4 py-2 text-sm border border-red-800 text-red-400 hover:bg-red-900/30 rounded-2xl">Clear All</button>
+                <div class="flex gap-x-3">
+                    <button onclick="hideThesisEditor()" class="px-5 py-2 text-sm border border-zinc-600 hover:bg-zinc-800 rounded-2xl">Cancel</button>
+                    <button onclick="saveThesis()" class="px-6 py-2 text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-2xl flex items-center gap-x-2">
+                        <i class="fa-solid fa-save"></i> <span>Save Changes</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>
