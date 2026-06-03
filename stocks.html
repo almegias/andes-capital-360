@@ -156,7 +156,7 @@
 
             toRender.forEach((item) => {
                 const isWatched = stockWatchlist.includes(item.ticker);
-                const dmaText = item.above_50dma === true ? 'Above' : (item.above_50dma === false ? 'Below' : '—');
+                const scoreData = calculateStockScore(item, data);
                 const row = document.createElement('tr');
                 row.className = 'hover:bg-zinc-800/50';
                 row.innerHTML = `
@@ -170,11 +170,16 @@
                     <td class="text-right pr-6 tabular-nums font-medium w-20">$${item.price ? item.price.toFixed(2) : '—'}</td>
                     <td class="text-right pr-6 tabular-nums font-medium w-16">
                         ${isPremium ? 
-                            `<span class="text-[10px] text-amber-400">${item.llm_news_score ? item.llm_news_score.toFixed(1) : '—'}</span>` : 
+                            `<span class="text-[10px] text-amber-400 font-semibold">${scoreData.final_score.toFixed(1)}</span>` : 
                             `<button onclick="unlockPremium()" class="text-xs px-2 py-1 bg-amber-400 text-zinc-950 rounded-2xl">Premium</button>`
                         }
                     </td>
-                    <td class="py-3 text-xs text-zinc-400">${isPremium ? (item.llm_thesis || item.comment || '') : (item.public_teaser || item.comment || '')} <span class="text-amber-400/70 text-[10px]">(detailed thesis for premium users)</span></td>
+                    <td class="py-3 text-xs text-zinc-400">
+                        ${isPremium ? 
+                            (item.llm_thesis || item.public_teaser || item.comment || '') : 
+                            `<button onclick="unlockPremium()" class="text-xs px-2 py-1 bg-amber-400 text-zinc-950 rounded-2xl">Premium</button>`
+                        }
+                    </td>
                     <td class="py-3 pr-4 text-right w-8">
                         <button onclick="deleteStock('${item.ticker}'); event.stopImmediatePropagation();" 
                                 class="text-red-400 hover:text-red-600 text-xs px-1">✕</button>
@@ -451,18 +456,32 @@
 
             data.push(newItem);
 
+            // Sort alphabetically by name
+            data.sort((a, b) => a.name.localeCompare(b.name));
+
+            saveToLocalStorage();
+            renderTable();
+            hideAddStockModal();
+        }
+
         // ADMIN STOCKS
         let currentEditingStockTicker = null;
 
         function showAdminScoreModal() {
             const modal = document.getElementById('admin-score-modal');
-            if (modal) modal.style.display = 'flex';
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
             renderAdminStockScoreTable();
         }
 
         function hideAdminScoreModal() {
             const modal = document.getElementById('admin-score-modal');
-            if (modal) modal.style.display = 'none';
+            if (modal) {
+                modal.classList.remove('flex');
+                modal.classList.add('hidden');
+            }
         }
 
         function renderAdminStockScoreTable() {
@@ -503,8 +522,12 @@
             try {
                 const prompt = `Based on available news and sentiment, is ${name} a viable investment for an investor or speculator looking for asymmetric risk/reward opportunities? Consider pros and cons and make a final recommendation and assign a score to the company from 1 to 10, with 10 being the best.`;
                 const res = await fetch(`/.netlify/functions/analyze-company-llm?name=${encodeURIComponent(name)}&ticker=${ticker}&prompt=${encodeURIComponent(prompt)}`);
-                const data = await res.json();
-                const llm = data.llm || {};
+                const resp = await res.json();
+                if (resp.error) {
+                    alert('LLM error: ' + (resp.error || 'unknown'));
+                    return;
+                }
+                const llm = resp.llm || {};
                 const score = llm.score || 5;
                 const thesis = `${llm.summary || ''}\n\n**Pros:**\n${(llm.pros || []).map(p => `- ${p}`).join('\n')}\n\n**Cons:**\n${(llm.cons || []).map(c => `- ${c}`).join('\n')}\n\n**Recommendation:** ${llm.recommendation || ''}`;
                 const item = data.find(d => d.ticker === ticker);
@@ -514,6 +537,7 @@
                 }
                 saveToLocalStorage();
                 renderAdminStockScoreTable();
+                renderTable();
                 setTimeout(() => showThesisEditorForStock(ticker), 200);
             } catch (e) { alert('LLM error: ' + e.message); }
         }
@@ -534,11 +558,19 @@
             document.getElementById('thesis-editor-company-name').textContent = `${item.name} (${ticker})`;
             document.getElementById('thesis-public-teaser').value = item.public_teaser || '';
             document.getElementById('thesis-full-content').value = item.llm_thesis || '';
-            document.getElementById('thesis-editor-modal').style.display = 'flex';
+            const modal = document.getElementById('thesis-editor-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
         }
 
         function hideThesisEditor() {
-            document.getElementById('thesis-editor-modal').style.display = 'none';
+            const modal = document.getElementById('thesis-editor-modal');
+            if (modal) {
+                modal.classList.remove('flex');
+                modal.classList.add('hidden');
+            }
         }
 
         function saveThesis() {
@@ -574,14 +606,19 @@
         }
 
         function showSubscribeModal() {
-            alert('Unlock full detailed theses, real-time data, and more.');
+            const modal = document.getElementById('subscribe-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
         }
-            // Sort alphabetically by name
-            data.sort((a, b) => a.name.localeCompare(b.name));
 
-            saveToLocalStorage();
-            renderTable();
-            hideAddStockModal();
+        function hideSubscribeModal() {
+            const modal = document.getElementById('subscribe-modal');
+            if (modal) {
+                modal.classList.remove('flex');
+                modal.classList.add('hidden');
+            }
         }
     </script>
 
