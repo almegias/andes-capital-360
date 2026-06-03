@@ -56,7 +56,7 @@
                 </button>
                 <span class="text-[10px] text-amber-400 -ml-2">Premium</span>
 
-                <button onclick="alert('Subscribe is a Premium feature.')" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-2xl">
+                <button onclick="showSubscribeModal()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-2xl">
                     <i class="fa-solid fa-credit-card"></i> <span>Subscribe $14.99/mo</span>
                 </button>
 
@@ -110,7 +110,7 @@
                             SCORE
                             <div class="text-[9px] text-zinc-500 font-normal tracking-normal">1-lowest to 10-highest</div>
                         </th>
-                        <th class="text-left py-3 pl-2">COMMENT</th>
+                        <th class="text-left py-3 pl-2">INVESTMENT THESIS</th>
                         <th class="w-8 pr-4"></th>
                     </tr>
                 </thead>
@@ -121,16 +121,23 @@
 
     <script>
         const cryptos = [
-            { ticker: 'BTC', name: 'Bitcoin', rank: null },
-            { ticker: 'ETH', name: 'Ethereum', rank: null },
-            { ticker: 'FARTCOIN', name: 'Fartcoin', rank: null },
-            { ticker: 'SOL', name: 'Solana', rank: null },
-            { ticker: 'USELESS', name: 'Useless', rank: null }
+            { ticker: 'BTC', name: 'Bitcoin', rank: null, volume: null, price_change_percentage_7d: null },
+            { ticker: 'ETH', name: 'Ethereum', rank: null, volume: null, price_change_percentage_7d: null },
+            { ticker: 'FARTCOIN', name: 'Fartcoin', rank: null, volume: null, price_change_percentage_7d: null },
+            { ticker: 'SOL', name: 'Solana', rank: null, volume: null, price_change_percentage_7d: null },
+            { ticker: 'USELESS', name: 'Useless', rank: null, volume: null, price_change_percentage_7d: null }
         ];
 
         let data = [...cryptos];
         let cryptoWatchlist = JSON.parse(localStorage.getItem('cryptoWatchlist') || '[]');
         let showOnlyWatchlist = false;
+        let isPremium = localStorage.getItem('andes_premium') === 'true';
+
+        function unlockPremium() {
+            localStorage.setItem('andes_premium', 'true');
+            isPremium = true;
+            renderTable();
+        }
 
         function formatMarketCap(value) {
             if (!value) return '—';
@@ -165,8 +172,13 @@
                     <td class="text-center py-3 w-14">${item.rank || '—'}</td>
                     <td class="text-right pr-6 tabular-nums font-medium w-20">$${item.price ? item.price.toLocaleString(undefined, {minimumFractionDigits: 4, maximumFractionDigits: 4}) : '—'}</td>
                     <td class="text-right pr-6 tabular-nums font-medium w-24">${formatMarketCap(item.market_cap)}</td>
-                    <td class="text-right pr-6 tabular-nums font-medium w-16"><span class="text-[10px] text-amber-400">Premium</span></td>
-                    <td class="py-3 text-xs text-zinc-400">${item.comment || ''}</td>
+                    <td class="text-right pr-6 tabular-nums font-medium w-16">
+                        ${isPremium ? 
+                            `<span class="text-[10px] text-amber-400">${item.llm_news_score ? item.llm_news_score.toFixed(1) : '—'}</span>` : 
+                            `<button onclick="unlockPremium()" class="text-xs px-2 py-1 bg-amber-400 text-zinc-950 rounded-2xl">Premium</button>`
+                        }
+                    </td>
+                    <td class="py-3 text-xs text-zinc-400">${isPremium ? (item.llm_thesis || item.comment || '') : (item.public_teaser || item.comment || '')} <span class="text-amber-400/70 text-[10px]">(detailed thesis for premium users)</span></td>
                     <td class="py-3 pr-4 text-right w-8">
                         <button onclick="deleteCrypto('${item.ticker}'); event.stopImmediatePropagation();" 
                                 class="text-red-400 hover:text-red-600 text-xs px-1">✕</button>
@@ -215,8 +227,8 @@
             }
 
             const ids = Object.values(coingeckoMap).join(',');
-            // Fetch prices + market caps + ranks in one efficient call
-            const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&order=market_cap_desc&per_page=100&page=1&sparkline=false`;
+            // Fetch prices + market caps + ranks + volume + 7d change
+            const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&order=market_cap_desc&per_page=100&page=1&sparkline=false&price_change_percentage=7d`;
 
             try {
                 const res = await fetch(url);
@@ -233,6 +245,8 @@
                             if (coinData.current_price != null) item.price = coinData.current_price;
                             if (coinData.market_cap != null) item.market_cap = coinData.market_cap;
                             if (coinData.market_cap_rank != null) item.rank = coinData.market_cap_rank;
+                            if (coinData.total_volume != null) item.volume = coinData.total_volume;
+                            if (coinData.price_change_percentage_7d != null) item.price_change_percentage_7d = coinData.price_change_percentage_7d;
                             item.comment = "(detailed thesis for premium users.)";
                         }
                     });
@@ -355,6 +369,8 @@
                 price: null,
                 market_cap: null,
                 rank: null,
+                volume: null,
+                price_change_percentage_7d: null,
                 score: 60,
                 above_50dma: null,
                 comment: "User added"
@@ -384,6 +400,12 @@
                         }
                         if (coinData.market_data?.market_cap?.usd) {
                             newItem.market_cap = coinData.market_data.market_cap.usd;
+                        }
+                        if (coinData.market_data?.total_volume?.usd) {
+                            newItem.volume = coinData.market_data.total_volume.usd;
+                        }
+                        if (coinData.market_data?.price_change_percentage_7d_in_currency?.usd) {
+                            newItem.price_change_percentage_7d = coinData.market_data.price_change_percentage_7d_in_currency.usd;
                         }
                         let desc = coinData.description?.en || '';
                         if (desc) {
@@ -502,8 +524,8 @@
             try {
                 const prompt = `Based on available news and sentiment, is ${name} a viable investment for a speculator looking for asymmetric risk/reward opportunities? Consider pros and cons and make a final recommendation and assign a score to the token from 1 to 10, with 10 being the best.`;
                 const res = await fetch(`/.netlify/functions/analyze-company-llm?name=${encodeURIComponent(name)}&ticker=${ticker}&prompt=${encodeURIComponent(prompt)}`);
-                const data = await res.json();
-                const llm = data.llm || {};
+                const resp = await res.json();
+                const llm = resp.llm || {};
                 const score = llm.score || 5;
                 const thesis = `${llm.summary || ''}\n\n**Pros:**\n${(llm.pros || []).map(p => `- ${p}`).join('\n')}\n\n**Cons:**\n${(llm.cons || []).map(c => `- ${c}`).join('\n')}\n\n**Recommendation:** ${llm.recommendation || ''}`;
                 const item = data.find(d => d.ticker === ticker);
@@ -570,6 +592,10 @@
             renderAdminCryptoScoreTable();
             renderTable();
             alert('Recalculated.');
+        }
+
+        function showSubscribeModal() {
+            alert('Unlock full detailed theses, real-time data, and more.');
         }
     </script>
 
@@ -644,6 +670,17 @@
                     </button>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- SUBSCRIBE MODAL -->
+    <div id="subscribe-modal" onclick="if (event.target.id === 'subscribe-modal') hideSubscribeModal()" class="hidden fixed inset-0 bg-black/80 z-[130] flex items-center justify-center p-4">
+        <div onclick="event.stopImmediatePropagation()" class="modal bg-zinc-900 border border-zinc-700 rounded-3xl max-w-md w-full p-8">
+            <div class="font-display text-2xl tracking-tighter font-semibold">Andes Capital 360 Premium</div>
+            <div class="mt-1 text-emerald-400 text-3xl font-semibold">$14.99 <span class="text-base text-zinc-400">/ month</span></div>
+            <div class="mt-4 text-sm text-zinc-300">Unlock full detailed theses, real-time data, and more.</div>
+            <button onclick="alert('Thank you! This would open Stripe checkout in production.'); hideSubscribeModal();" class="mt-6 w-full py-3 rounded-2xl bg-emerald-600 font-semibold">Subscribe Now</button>
+            <button onclick="hideSubscribeModal()" class="mt-3 w-full py-3 rounded-2xl border border-zinc-600 text-sm">Maybe later</button>
         </div>
     </div>
 

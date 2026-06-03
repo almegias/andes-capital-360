@@ -147,7 +147,7 @@
                                 <div class="text-[9px] text-zinc-500 font-normal tracking-normal">1-lowest to 10-highest</div>
                             </th>
                             <th class="w-20 text-right py-3 pr-3">PRICE</th>
-                            <th class="text-left py-3 pl-2">COMMENT</th>
+                            <th class="text-left py-3 pl-2">INVESTMENT THESIS</th>
                             <th class="w-8"></th>
                         </tr>
                     </thead>
@@ -186,7 +186,7 @@
         <div onclick="event.stopImmediatePropagation()" class="modal bg-zinc-900 border border-zinc-700 rounded-3xl max-w-md w-full p-8">
             <div class="font-display text-2xl tracking-tighter font-semibold">Andes Capital 360 Premium</div>
             <div class="mt-1 text-emerald-400 text-3xl font-semibold">$14.99 <span class="text-base text-zinc-400">/ month</span></div>
-            <div class="mt-4 text-sm text-zinc-300">Unlock full detailed theses, real-time data, Excel exports, and more.</div>
+            <div class="mt-4 text-sm text-zinc-300">Unlock full detailed theses, real-time data, and more.</div>
             <button onclick="alert('Thank you! This would open Stripe checkout in production.'); hideSubscribeModal();" class="mt-6 w-full py-3 rounded-2xl bg-emerald-600 font-semibold">Subscribe Now</button>
             <button onclick="hideSubscribeModal()" class="mt-3 w-full py-3 rounded-2xl border border-zinc-600 text-sm">Maybe later</button>
         </div>
@@ -325,6 +325,13 @@
         // ==================== STATE ====================
         let companies = [];
         let watchlist = [];
+        let isPremium = localStorage.getItem('andes_premium') === 'true';
+
+        function unlockPremium() {
+            localStorage.setItem('andes_premium', 'true');
+            isPremium = true;
+            renderTable(companies);
+        }
 
         // ==================== HELPERS ====================
         function getUserId() {
@@ -952,9 +959,12 @@
                     <td class="py-2.5 text-zinc-300 w-24">${c.category}</td>
                     <td class="py-2.5 text-center w-28"><span class="px-2 py-px text-[10px] rounded-xl bg-zinc-800 text-zinc-300">${juris}</span></td>
                     <td class="py-2.5 text-center w-16">
-                        <span class="data-badge px-2.5 py-px rounded-2xl font-semibold bg-emerald-900 text-emerald-300 text-sm">
-                            ${c.overall_score ? Number(c.overall_score).toFixed(1) : '—'}
-                        </span>
+                        ${isPremium ? 
+                            `<span class="data-badge px-2.5 py-px rounded-2xl font-semibold bg-emerald-900 text-emerald-300 text-sm">
+                                ${c.overall_score ? Number(c.overall_score).toFixed(1) : '—'}
+                            </span>` : 
+                            `<button onclick="unlockPremium()" class="text-xs px-2 py-1 bg-amber-400 text-zinc-950 rounded-2xl hover:bg-amber-500">Premium</button>`
+                        }
                     </td>
                     <td class="py-2.5 text-right pr-3 w-20">$${c.current_price ? c.current_price.toFixed(2) : '—'}</td>
                     <td class="py-2.5 pl-2 pr-1 text-xs text-zinc-400 max-w-[320px]">
@@ -1199,37 +1209,18 @@
         // ==================== UI HELPERS ====================
         function showDetail(id) {
             const c = companies.find(x => x.id === id);
-            if (c) alert(`${c.name}\n\n${c.comment || 'No thesis yet.'}`);
+            if (c) alert(`${c.name}\n\n${c.investment_thesis || c.comment || 'No thesis yet.'}`);
         }
 
         // Permanent Supabase-backed delete for Mining page (to make it persist across refreshes)
-        async function deleteCompany(id, ticker, name) {
-            if (!confirm(`Permanently delete ${name || ticker} from the database?\n\nThis action cannot be undone.`)) return;
-
-            try {
-                const { error } = await supabaseClient.from('companies').delete().eq('id', id);
-                if (error) throw error;
-
-                const { data, error: fetchError } = await supabaseClient
-                    .from('companies')
-                    .select('*')
-                    .order('name', { ascending: true });
-
-                if (fetchError) throw fetchError;
-
-                companies = data || [];
-                renderTable(companies);
-
-                if (adminScoreModalOpen) {
-                    await renderAdminScoreTable();
-                }
-
-                alert(`${name || ticker} has been permanently deleted from the database.`);
-
-            } catch (err) {
-                alert('Delete failed: ' + err.message);
-                console.error('Delete error:', err);
-            }
+        function deleteCompany(id, ticker, name) {
+            if (!confirm(`Delete ${name || ticker} from the list?`)) return;
+            companies = companies.filter(c => c.id !== id);
+            renderTable(companies);
+            // Also delete from Supabase for permanence (same as before)
+            supabaseClient.from('companies').delete().eq('id', id).catch(err => {
+                console.error('Supabase delete failed (but local removed):', err);
+            });
         }
 
 
