@@ -28,10 +28,63 @@ const YAHOO_ALIASES = {
   'MAG':     ['MAG', 'MAG.TO'],
 };
 
+// Cached crumb/cookies for Yahoo v7 quote (which now often requires it to avoid "Unauthorized")
+let cachedYahooCrumb = null;
+let cachedYahooCookies = '';
+
+async function getYahooCrumb() {
+  if (cachedYahooCrumb) return { crumb: cachedYahooCrumb, cookies: cachedYahooCookies };
+  try {
+    // Use realistic browser UA so Yahoo serves the full page HTML containing the CrumbStore/crumb for the quote API
+    const pageUrl = 'https://finance.yahoo.com/quote/NVDA';
+    const pageRes = await fetch(pageUrl, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36' }
+    });
+    const html = await pageRes.text();
+    const match = html.match(/"crumb":"([^"]+)"/);
+    if (match) cachedYahooCrumb = match[1];
+    const setCookie = pageRes.headers.get('set-cookie');
+    if (setCookie) cachedYahooCookies = setCookie;
+    return { crumb: cachedYahooCrumb, cookies: cachedYahooCookies };
+  } catch (e) {
+    return { crumb: null, cookies: '' };
+  }
+}
+
+async function fetchYahooQuote(ticker) {
+  // Try direct first (works for some), fallback to crumb+cookie if Unauthorized
+  try {
+    let url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${ticker}`;
+    let headers = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36' };
+    let res = await fetch(url, { headers });
+    let json = null;
+    if (res.ok) {
+      json = await res.json();
+    }
+    const hasError = json?.quoteResponse?.error || json?.finance?.error;
+    if (!res.ok || hasError) {
+      // Get crumb and retry
+      const { crumb, cookies } = await getYahooCrumb();
+      if (crumb) {
+        url += `&crumb=${encodeURIComponent(crumb)}`;
+        if (cookies) headers['Cookie'] = cookies;
+        res = await fetch(url, { headers });
+        if (res.ok) {
+          json = await res.json();
+        }
+      }
+    }
+    if (!json || json?.quoteResponse?.error || json?.finance?.error) return null;
+    return json?.quoteResponse?.result?.[0] || null;
+  } catch (e) {
+    return null;
+  }
+}
+
 async function fetchYahoo(ticker, range = '3mo') {
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=${range}`;
   const res = await fetch(url, {
-    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AndesCapital360/1.0)' },
+    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36' },
   });
   if (!res.ok) return null;
 
@@ -66,14 +119,7 @@ async function fetchYahoo(ticker, range = '3mo') {
 
 async function fetchMarketCap(ticker) {
   try {
-    const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${ticker}`;
-    const res = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AndesCapital360/1.0)' },
-    });
-    if (!res.ok) return null;
-
-    const json = await res.json();
-    const quote = json?.quoteResponse?.result?.[0];
+    const quote = await fetchYahooQuote(ticker);
     if (!quote) return null;
 
     let marketCap = quote.marketCap ?? null;
@@ -91,14 +137,7 @@ async function fetchMarketCap(ticker) {
 
 async function fetchCompanyInfo(ticker) {
   try {
-    const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${ticker}`;
-    const res = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AndesCapital360/1.0)' },
-    });
-    if (!res.ok) return null;
-
-    const json = await res.json();
-    const quote = json?.quoteResponse?.result?.[0];
+    const quote = await fetchYahooQuote(ticker);
     if (!quote) return null;
 
     return {
@@ -141,19 +180,12 @@ exports.handler = async (event) => {
           marketCap = info.marketCap;
         }
 
-        // Final fallback using sharesOutstanding from the quote
+        // Final fallback using sharesOutstanding from the quote (via crumb-aware helper)
         if (!marketCap && info) {
-          // Re-fetch quote to get shares if needed
           try {
-            const quoteRes = await fetch(`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${sym}`, {
-              headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AndesCapital360/1.0)' }
-            });
-            if (quoteRes.ok) {
-              const qjson = await quoteRes.json();
-              const q = qjson?.quoteResponse?.result?.[0];
-              if (q?.sharesOutstanding && q?.regularMarketPrice) {
-                marketCap = Math.round(q.sharesOutstanding * q.regularMarketPrice);
-              }
+            const q = await fetchYahooQuote(sym);
+            if (q?.sharesOutstanding && q?.regularMarketPrice) {
+              marketCap = Math.round(q.sharesOutstanding * q.regularMarketPrice);
             }
           } catch (e) {}
         }

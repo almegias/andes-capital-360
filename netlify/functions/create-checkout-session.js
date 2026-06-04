@@ -44,7 +44,8 @@ exports.handler = async (event) => {
   const siteUrl = process.env.URL || process.env.DEPLOY_URL || 'https://andescapital360.com';
 
   try {
-    let priceId = process.env.STRIPE_PRICE_ID || null;
+    // Prefer STRIPE_PRICE_ID from Netlify env (recommended), then explicit price_id from client body (for convenience), then resolve via lookup_key
+    let priceId = (process.env.STRIPE_PRICE_ID || body.price_id || '').trim().replace(/["“”]/g, '') || null;
 
     // If no direct price ID, try to resolve via lookup_key (Stripe best practice for prebuilt examples)
     if (!priceId && lookup_key) {

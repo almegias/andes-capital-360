@@ -251,7 +251,13 @@
                             if (coinData.market_cap != null) item.market_cap = coinData.market_cap;
                             if (coinData.market_cap_rank != null) item.rank = coinData.market_cap_rank;
                             if (coinData.total_volume != null) item.volume = coinData.total_volume;
-                            if (coinData.price_change_percentage_7d != null) item.price_change_percentage_7d = coinData.price_change_percentage_7d;
+                            let pct7d = coinData.price_change_percentage_7d_in_currency;
+                            if (pct7d != null) {
+                                if (typeof pct7d === 'object' && pct7d !== null) {
+                                    pct7d = pct7d.usd || pct7d;
+                                }
+                                if (pct7d != null) item.price_change_percentage_7d = pct7d;
+                            }
                             item.comment = "(detailed thesis for premium users.)";
                         }
                     });
@@ -557,6 +563,7 @@
                 item[field] = parseFloat(value) || null;
                 saveToLocalStorage();
                 renderAdminCryptoScoreTable();
+                renderTable();  // also update main table score if premium view
             }
         }
 
@@ -652,7 +659,10 @@
                 const res = await fetch('/.netlify/functions/create-checkout-session', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ lookup_key: 'premium_monthly' })  // change to match your Stripe Price lookup_key if using one
+                    body: JSON.stringify({ 
+                        lookup_key: 'premium_monthly', 
+                        price_id: 'price_1MoBy5LkdIwHu7ixZhnattbh'  // the Price ID you found on Stripe Price Object page; also set STRIPE_PRICE_ID env var for production (preferred, no hardcode)
+                    })  
                 });
                 const data = await res.json();
                 if (data.url) {

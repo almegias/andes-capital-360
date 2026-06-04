@@ -1251,7 +1251,10 @@
                 const res = await fetch('/.netlify/functions/create-checkout-session', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ lookup_key: 'premium_monthly' })  // change to match your Stripe Price lookup_key if using one
+                    body: JSON.stringify({ 
+                        lookup_key: 'premium_monthly', 
+                        price_id: 'price_1MoBy5LkdIwHu7ixZhnattbh'  // the Price ID you found on Stripe Price Object page; also set STRIPE_PRICE_ID env var for production (preferred, no hardcode)
+                    })  
                 });
                 const data = await res.json();
                 if (data.url) {
