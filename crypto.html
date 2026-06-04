@@ -510,7 +510,7 @@
                     <td class="py-2.5 pr-4 font-medium">${item.name}</td>
                     <td class="py-2.5 text-center">${(item.volume / item.market_cap * 100 || 0).toFixed(2)}%</td>
                     <td class="py-2.5 text-center">${item.price_change_percentage_7d || 0}%</td>
-                    <td class="py-2.5 text-center"><input type="number" step="0.5" value="${item.llm_news_score ?? 5}" class="w-16 bg-zinc-950 border border-zinc-700 rounded px-1 py-0.5 text-sm" onchange="updateCryptoField('${item.ticker}', 'llm_news_score', this.value)"><button onclick="runLLMForCrypto('${item.ticker}', '${item.name.replace(/'/g, "\\'")}')" class="text-[10px] px-1 border border-amber-700 text-amber-400 rounded ml-1">LLM</button></td>
+                    <td class="py-2.5 text-center"><input type="number" step="0.5" value="${item.llm_news_score ?? 5}" class="w-16 bg-zinc-950 border border-zinc-700 rounded px-1 py-0.5 text-sm" data-ticker="${item.ticker}" data-field="llm_news_score" onchange="updateCryptoField('${item.ticker}', 'llm_news_score', this.value)"><button onclick="runLLMForCrypto('${item.ticker}', '${item.name.replace(/'/g, "\\'")}')" class="text-[10px] px-1 border border-amber-700 text-amber-400 rounded ml-1">LLM</button></td>
                     <td class="py-2.5 text-center"><button onclick="showThesisEditorForCrypto('${item.ticker}')" class="text-[10px] px-2 py-1 border ${item.llm_thesis ? 'border-emerald-700 text-emerald-400' : 'border-zinc-600 text-zinc-400'} hover:bg-zinc-800 rounded">${item.llm_thesis ? 'Edit' : 'Add'}</button></td>
                     <td class="py-2.5 text-center"><span class="px-2 py-0.5 rounded bg-emerald-900 text-emerald-300 font-semibold">${scoreData.final_score.toFixed(1)}</span></td>
                     <td class="py-2.5 text-xs"><button onclick="showCryptoScoreBreakdown('${item.ticker}')" class="px-2 py-1 text-emerald-400 border border-emerald-800 rounded text-[10px]">Break</button></td>
@@ -609,6 +609,22 @@
         }
 
         async function recalculateAllCryptoScores() {
+            // Sync any pending edits from admin table inputs (in case onchange didn't fire due to no blur)
+            const tbody = document.getElementById('admin-score-tbody');
+            if (tbody) {
+                tbody.querySelectorAll('input[data-field]').forEach(input => {
+                    const ticker = input.getAttribute('data-ticker');
+                    const field = input.getAttribute('data-field');
+                    const val = parseFloat(input.value);
+                    const item = data.find(d => d.ticker === ticker);
+                    if (item && field && !isNaN(val)) {
+                        item[field] = val;
+                    } else if (item && field && input.value.trim() === '') {
+                        item[field] = null;
+                    }
+                });
+            }
+            saveToLocalStorage();
             renderAdminCryptoScoreTable();
             renderTable();
             alert('Recalculated.');
@@ -627,6 +643,25 @@
             if (modal) {
                 modal.classList.remove('flex');
                 modal.classList.add('hidden');
+            }
+        }
+
+        // Real Stripe checkout (replaces previous alert placeholder)
+        async function startSubscriptionCheckout() {
+            try {
+                const res = await fetch('/.netlify/functions/create-checkout-session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ lookup_key: 'premium_monthly' })  // change to match your Stripe Price lookup_key if using one
+                });
+                const data = await res.json();
+                if (data.url) {
+                    window.location.href = data.url;
+                } else {
+                    alert('Could not start checkout: ' + (data.error || 'Unknown error. Check Netlify env STRIPE_SECRET_KEY and STRIPE_PRICE_ID.'));
+                }
+            } catch (e) {
+                alert('Checkout error: ' + e.message);
             }
         }
     </script>
@@ -711,7 +746,7 @@
             <div class="font-display text-2xl tracking-tighter font-semibold">Andes Capital 360 Premium</div>
             <div class="mt-1 text-emerald-400 text-3xl font-semibold">$14.99 <span class="text-base text-zinc-400">/ month</span></div>
             <div class="mt-4 text-sm text-zinc-300">Unlock full detailed theses, real-time data, and more.</div>
-            <button onclick="alert('Thank you! This would open Stripe checkout in production.'); hideSubscribeModal();" class="mt-6 w-full py-3 rounded-2xl bg-emerald-600 font-semibold">Subscribe Now</button>
+            <button onclick="startSubscriptionCheckout()" class="mt-6 w-full py-3 rounded-2xl bg-emerald-600 font-semibold">Subscribe Now</button>
             <button onclick="hideSubscribeModal()" class="mt-3 w-full py-3 rounded-2xl border border-zinc-600 text-sm">Maybe later</button>
         </div>
     </div>

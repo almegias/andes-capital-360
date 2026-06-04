@@ -187,7 +187,7 @@
             <div class="font-display text-2xl tracking-tighter font-semibold">Andes Capital 360 Premium</div>
             <div class="mt-1 text-emerald-400 text-3xl font-semibold">$14.99 <span class="text-base text-zinc-400">/ month</span></div>
             <div class="mt-4 text-sm text-zinc-300">Unlock full detailed theses, real-time data, and more.</div>
-            <button onclick="alert('Thank you! This would open Stripe checkout in production.'); hideSubscribeModal();" class="mt-6 w-full py-3 rounded-2xl bg-emerald-600 font-semibold">Subscribe Now</button>
+            <button onclick="startSubscriptionCheckout()" class="mt-6 w-full py-3 rounded-2xl bg-emerald-600 font-semibold">Subscribe Now</button>
             <button onclick="hideSubscribeModal()" class="mt-3 w-full py-3 rounded-2xl border border-zinc-600 text-sm">Maybe later</button>
         </div>
     </div>
@@ -1243,6 +1243,25 @@
         function hideSubscribeModal() {
             document.getElementById('subscribe-modal').classList.remove('flex');
             document.getElementById('subscribe-modal').classList.add('hidden');
+        }
+
+        // Real Stripe checkout (replaces previous alert placeholder)
+        async function startSubscriptionCheckout() {
+            try {
+                const res = await fetch('/.netlify/functions/create-checkout-session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ lookup_key: 'premium_monthly' })  // change to match your Stripe Price lookup_key if using one
+                });
+                const data = await res.json();
+                if (data.url) {
+                    window.location.href = data.url;
+                } else {
+                    alert('Could not start checkout: ' + (data.error || 'Unknown error. Check Netlify env STRIPE_SECRET_KEY and STRIPE_PRICE_ID.'));
+                }
+            } catch (e) {
+                alert('Checkout error: ' + e.message);
+            }
         }
 
         async function refreshAllPrices() {
