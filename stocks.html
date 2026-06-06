@@ -148,6 +148,9 @@
         let showOnlyWatchlist = false;
         let isPremium = localStorage.getItem('andes_premium') === 'true';
 
+        // Flag to avoid repeated 404 spam if watchlists table is not set up in Supabase (common for stocks vs mining)
+        let supabaseStocksWatchlistEnabled = localStorage.getItem('stocks_supabase_watchlist_disabled') !== 'true';
+
         function unlockPremium() {
             localStorage.setItem('andes_premium', 'true');
             isPremium = true;
@@ -350,30 +353,75 @@
 
         // Start
         initializePrices();
-        loadStockWatchlistFromSupabase();
+        if (supabaseStocksWatchlistEnabled) {
+            loadStockWatchlistFromSupabase();
+        }
 
-        // ==================== SUPABASE WATCHLIST FOR STOCKS ====================
+        // ==================== SUPABASE WATCHLIST FOR STOCKS (safe queries to avoid 404s on missing table or bad filters) ====================
         async function loadStockWatchlistFromSupabase() {
+            if (!supabaseStocksWatchlistEnabled) return;
             const userId = getUserId();
             try {
+                // Avoid .like() which can produce malformed URL filters (like.stock:% ) leading to 404s.
+                // Fetch all for user (small table) and filter client-side.
                 const { data, error } = await supabaseClient
                     .from('watchlists')
                     .select('company_id')
-                    .eq('user_id', userId)
-                    .like('company_id', 'stock:%');
+                    .eq('user_id', userId);
 
-                if (!error && data) {
-                    stockWatchlist = data.map(item => item.company_id.replace('stock:', ''));
+                if (error) {
+                    // If table missing or permission issue (404/PGRST205), permanently disable for this browser to stop console noise
+                    if (error.code === 'PGRST205' || (error.message && /does not exist|404/i.test(error.message))) {
+                        localStorage.setItem('stocks_supabase_watchlist_disabled', 'true');
+                        supabaseStocksWatchlistEnabled = false;
+                    }
+                    return;
+                }
+                if (data) {
+                    stockWatchlist = data
+                        .filter(item => item.company_id && item.company_id.startsWith('stock:'))
+                        .map(item => item.company_id.replace('stock:', ''));
                     localStorage.setItem('stockWatchlist', JSON.stringify(stockWatchlist));
                 }
-            } catch (e) {}
+            } catch (e) {
+                if (e && (e.message && /404|does not exist/i.test(e.message))) {
+                    localStorage.setItem('stocks_supabase_watchlist_disabled', 'true');
+                    supabaseStocksWatchlistEnabled = false;
+                }
+            }
         }
 
         async function syncStockWatchlistToSupabase() {
+            if (!supabaseStocksWatchlistEnabled) {
+                // just persist locally
+                localStorage.setItem('stockWatchlist', JSON.stringify(stockWatchlist));
+                return;
+            }
             const userId = getUserId();
-            // Simple approach: delete all for user with prefix, then re-insert
             try {
-                await supabaseClient.from('watchlists').delete().eq('user_id', userId).like('company_id', 'stock:%');
+                // Safe approach: fetch existing for user, delete only the stock: ones by their ids (avoids .like filter that can 404)
+                const { data: existing, error: fetchErr } = await supabaseClient
+                    .from('watchlists')
+                    .select('id,company_id')
+                    .eq('user_id', userId);
+
+                if (fetchErr) {
+                    if (fetchErr.code === 'PGRST205' || (fetchErr.message && /does not exist|404/i.test(fetchErr.message))) {
+                        localStorage.setItem('stocks_supabase_watchlist_disabled', 'true');
+                        supabaseStocksWatchlistEnabled = false;
+                    }
+                    localStorage.setItem('stockWatchlist', JSON.stringify(stockWatchlist));
+                    return;
+                }
+
+                if (existing && existing.length > 0) {
+                    const stockOnes = existing.filter(e => e.company_id && e.company_id.startsWith('stock:'));
+                    const idsToDelete = stockOnes.map(e => e.id);
+                    if (idsToDelete.length > 0) {
+                        await supabaseClient.from('watchlists').delete().in('id', idsToDelete);
+                    }
+                }
+
                 const inserts = stockWatchlist.map(ticker => ({
                     user_id: userId,
                     company_id: `stock:${ticker}`
@@ -381,7 +429,13 @@
                 if (inserts.length > 0) {
                     await supabaseClient.from('watchlists').insert(inserts);
                 }
-            } catch (e) {}
+            } catch (e) {
+                if (e && (e.message && /404|does not exist/i.test(e.message))) {
+                    localStorage.setItem('stocks_supabase_watchlist_disabled', 'true');
+                    supabaseStocksWatchlistEnabled = false;
+                }
+                localStorage.setItem('stockWatchlist', JSON.stringify(stockWatchlist));
+            }
         }
 
         // ==================== ADD STOCK (Simplified) ====================
@@ -658,9 +712,10 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        lookup_key: 'premium_monthly', 
-                        price_id: 'price_1MoBy5LkdIwHu7ixZhnattbh'  // the Price ID you found on Stripe Price Object page; also set STRIPE_PRICE_ID env var for production (preferred, no hardcode)
-                    })  
+                        lookup_key: 'premium_monthly'
+                        // IMPORTANT: Set STRIPE_PRICE_ID (to a valid current price_... ID from your Stripe dashboard, matching test/live mode of your secret key) in Netlify env vars.
+                        // The price_id can also be passed here but must be a real active one; remove any old/invalid ones.
+                    }) 
                 });
                 const data = await res.json();
                 if (data.url) {

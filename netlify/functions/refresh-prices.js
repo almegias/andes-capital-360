@@ -35,16 +35,35 @@ let cachedYahooCookies = '';
 async function getYahooCrumb() {
   if (cachedYahooCrumb) return { crumb: cachedYahooCrumb, cookies: cachedYahooCookies };
   try {
-    // Use realistic browser UA so Yahoo serves the full page HTML containing the CrumbStore/crumb for the quote API
-    const pageUrl = 'https://finance.yahoo.com/quote/NVDA';
+    // Use very realistic browser headers so Yahoo serves the full page HTML containing the crumb (anti-bot is strict)
+    const pageUrl = 'https://finance.yahoo.com/quote/NVDA/';
     const pageRes = await fetch(pageUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36' }
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Referer': 'https://www.google.com/',
+        'Sec-Ch-Ua': '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+        'Sec-Ch-Ua-Mobile': '?0',
+        'Sec-Ch-Ua-Platform': '"Windows"',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'cross-site',
+        'Sec-Fetch-User': '?1',
+        'Upgrade-Insecure-Requests': '1'
+      }
     });
     const html = await pageRes.text();
-    const match = html.match(/"crumb":"([^"]+)"/);
+    // Try several common patterns for the crumb (page structure changes)
+    let match = html.match(/"crumb"\s*:\s*"([^"]+)"/);
+    if (!match) match = html.match(/CrumbStore[^}]*"crumb"\s*:\s*"([^"]+)"/);
+    if (!match) match = html.match(/crumb["']?\s*[:=]\s*["']([^"']+)["']/i);
     if (match) cachedYahooCrumb = match[1];
     const setCookie = pageRes.headers.get('set-cookie');
-    if (setCookie) cachedYahooCookies = setCookie;
+    if (setCookie) {
+      cachedYahooCookies = Array.isArray(setCookie) ? setCookie.join('; ') : setCookie;
+    }
     return { crumb: cachedYahooCrumb, cookies: cachedYahooCookies };
   } catch (e) {
     return { crumb: null, cookies: '' };

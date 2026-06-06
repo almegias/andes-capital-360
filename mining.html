@@ -1252,9 +1252,10 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        lookup_key: 'premium_monthly', 
-                        price_id: 'price_1MoBy5LkdIwHu7ixZhnattbh'  // the Price ID you found on Stripe Price Object page; also set STRIPE_PRICE_ID env var for production (preferred, no hardcode)
-                    })  
+                        lookup_key: 'premium_monthly'
+                        // IMPORTANT: Set STRIPE_PRICE_ID (to a valid current price_... ID from your Stripe dashboard, matching test/live mode of your secret key) in Netlify env vars.
+                        // The price_id can also be passed here but must be a real active one; remove any old/invalid ones.
+                    }) 
                 });
                 const data = await res.json();
                 if (data.url) {

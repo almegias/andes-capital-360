@@ -67,7 +67,7 @@ exports.handler = async (event) => {
       return {
         statusCode: 400,
         body: JSON.stringify({
-          error: 'No price ID available. Set STRIPE_PRICE_ID (e.g. price_123...) in Netlify env, or pass a valid lookup_key that is configured on a Price in your Stripe dashboard.',
+          error: 'No price ID available. Set STRIPE_PRICE_ID (e.g. price_1ABC... the full ID from your Stripe Price object) in Netlify environment variables. Make sure the key (sk_test_ or sk_live_) matches the mode (Test/Live) where you created the price, and that the price is active for subscriptions.',
         }),
       };
     }
